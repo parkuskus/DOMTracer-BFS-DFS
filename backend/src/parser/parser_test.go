@@ -20,7 +20,7 @@ func printTree(node *Node, indent string, depth int) {
 }
 
 func TestHTMLScraperWikipedia(t *testing.T) {
-	root, err := HTMLScraper("https://en.wikipedia.org/wiki/Breadth-first_search")
+	root, err := HTMLScraper("https://books.toscrape.com/")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
