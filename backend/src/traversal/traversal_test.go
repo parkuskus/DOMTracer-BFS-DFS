@@ -1,6 +1,7 @@
 package traversal
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/parkuskus/Tubes2_nama_kelompok/src/parser"
@@ -18,6 +19,7 @@ func TestSearchDOMBFSOrder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
+	logSearchResult(t, "BFS all nodes", res)
 
 	if res.VisitedCount != 6 {
 		t.Fatalf("expected visited 6, got %d", res.VisitedCount)
@@ -40,6 +42,7 @@ func TestSearchDOMDFSOrder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
+	logSearchResult(t, "DFS all nodes", res)
 
 	if res.VisitedCount != 6 {
 		t.Fatalf("expected visited 6, got %d", res.VisitedCount)
@@ -62,6 +65,7 @@ func TestSearchDOMLimitAndPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
+	logSearchResult(t, "BFS class .hit with limit 1", res)
 
 	if len(res.Matches) != 1 {
 		t.Fatalf("expected 1 match, got %d", len(res.Matches))
@@ -131,4 +135,16 @@ func assertStringSliceEqual(t *testing.T, got, want []string) {
 			t.Fatalf("slice mismatch at index %d: got %s, want %s", i, got[i], want[i])
 		}
 	}
+}
+
+func logSearchResult(t *testing.T, label string, res SearchResult) {
+	t.Helper()
+
+	pretty, err := json.MarshalIndent(res, "", "  ")
+	if err != nil {
+		t.Logf("%s SearchResult (fallback): %+v", label, res)
+		return
+	}
+
+	t.Logf("%s SearchResult:\n%s", label, pretty)
 }
