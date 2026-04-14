@@ -7,6 +7,7 @@ import (
 	"github.com/parkuskus/Tubes2_nama_kelompok/src/parser"
 )
 
+// BFS should visit nodes level by level.
 func TestSearchDOMBFSOrder(t *testing.T) {
 	root := sampleTree()
 
@@ -30,6 +31,7 @@ func TestSearchDOMBFSOrder(t *testing.T) {
 	assertStringSliceEqual(t, gotOrder, wantOrder)
 }
 
+// DFS should go deep first before moving to sibling branches.
 func TestSearchDOMDFSOrder(t *testing.T) {
 	root := sampleTree()
 
@@ -53,6 +55,7 @@ func TestSearchDOMDFSOrder(t *testing.T) {
 	assertStringSliceEqual(t, gotOrder, wantOrder)
 }
 
+// Top-N behavior: stop after first match and keep the path to that node.
 func TestSearchDOMLimitAndPath(t *testing.T) {
 	root := sampleTree()
 
@@ -83,6 +86,7 @@ func TestSearchDOMLimitAndPath(t *testing.T) {
 	assertStringSliceEqual(t, res.Matches[0].PathFromRoot, wantPath)
 }
 
+// Validate common bad requests early.
 func TestSearchDOMInvalidInput(t *testing.T) {
 	root := sampleTree()
 
@@ -102,6 +106,7 @@ func TestSearchDOMInvalidInput(t *testing.T) {
 	}
 }
 
+// Stable test tree used by all traversal test cases.
 func sampleTree() *parser.Node {
 	root := &parser.Node{Tag: "html", Depth: 0, Attributes: map[string]string{}}
 	body := &parser.Node{Tag: "body", Depth: 1, Parent: root, Attributes: map[string]string{}}
@@ -117,6 +122,7 @@ func sampleTree() *parser.Node {
 	return root
 }
 
+// Helper for checking visit order.
 func tagsFromEvents(events []VisitEvent) []string {
 	out := make([]string, 0, len(events))
 	for _, event := range events {
@@ -128,6 +134,7 @@ func tagsFromEvents(events []VisitEvent) []string {
 func assertStringSliceEqual(t *testing.T, got, want []string) {
 	t.Helper()
 	if len(got) != len(want) {
+		// Verbose mode output to inspect full SearchResult payload quickly.
 		t.Fatalf("slice length mismatch: got %d, want %d", len(got), len(want))
 	}
 	for i := range want {

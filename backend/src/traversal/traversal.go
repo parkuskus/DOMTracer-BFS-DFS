@@ -59,6 +59,7 @@ type queueItem struct {
 	pathFromTop []string
 }
 
+// SearchDOM is the single entry point for selector search over a DOM tree.
 func SearchDOM(root *parser.Node, req SearchRequest) (SearchResult, error) {
 	if root == nil {
 		return SearchResult{}, fmt.Errorf("root cannot be nil")
@@ -69,6 +70,7 @@ func SearchDOM(root *parser.Node, req SearchRequest) (SearchResult, error) {
 	}
 
 	algo := strings.ToUpper(strings.TrimSpace(req.Algorithm))
+	// Default to BFS if algorithm is omitted.
 	if algo == "" {
 		algo = AlgorithmBFS
 	}
@@ -89,6 +91,7 @@ func SearchDOM(root *parser.Node, req SearchRequest) (SearchResult, error) {
 	}
 }
 
+// searchBFS walks the DOM breadth-first and collects matches plus optional logs.
 func searchBFS(root *parser.Node, req SearchRequest) SearchResult {
 	start := time.Now()
 	res := SearchResult{
@@ -112,6 +115,7 @@ func searchBFS(root *parser.Node, req SearchRequest) SearchResult {
 			break
 		}
 
+		// BFS expands children in natural order so traversal is level by level.
 		for i, child := range current.node.Children {
 			childPath := fmt.Sprintf("%s/%d", current.nodePath, i)
 			childRoute := append(cloneStringSlice(current.pathFromTop), child.Tag)
@@ -128,6 +132,7 @@ func searchBFS(root *parser.Node, req SearchRequest) SearchResult {
 	return res
 }
 
+// searchDFS walks the DOM depth-first and keeps left-to-right sibling order.
 func searchDFS(root *parser.Node, req SearchRequest) SearchResult {
 	start := time.Now()
 	res := SearchResult{
@@ -152,6 +157,7 @@ func searchDFS(root *parser.Node, req SearchRequest) SearchResult {
 			break
 		}
 
+		// Push children in reverse so pop order still visits left-to-right.
 		for i := len(current.node.Children) - 1; i >= 0; i-- {
 			child := current.node.Children[i]
 			childPath := fmt.Sprintf("%s/%d", current.nodePath, i)
@@ -169,6 +175,7 @@ func searchDFS(root *parser.Node, req SearchRequest) SearchResult {
 	return res
 }
 
+// processVisit updates visit stats, checks selector match, and handles early stop.
 func processVisit(res *SearchResult, current queueItem, req SearchRequest) (matched bool, shouldStop bool) {
 	res.VisitedCount++
 
@@ -176,6 +183,7 @@ func processVisit(res *SearchResult, current queueItem, req SearchRequest) (matc
 		res.MaxDepthVisited = current.node.Depth
 	}
 
+	// Selector matching is delegated to selector package so traversal stays generic.
 	matched = selector.MatchSelector(current.node, req.Selector)
 	if matched {
 		hit := MatchHit{
@@ -196,6 +204,7 @@ func processVisit(res *SearchResult, current queueItem, req SearchRequest) (matc
 		res.TraversalLog = append(res.TraversalLog, buildVisitEvent(res.VisitedCount, current, matched))
 	}
 
+	// Stop early when Top-N limit is reached.
 	if req.Limit > 0 && len(res.Matches) >= req.Limit {
 		res.StoppedByLimit = true
 		return matched, true
@@ -204,6 +213,7 @@ func processVisit(res *SearchResult, current queueItem, req SearchRequest) (matc
 	return matched, false
 }
 
+// buildVisitEvent converts traversal state into a serializable log entry.
 func buildVisitEvent(step int, current queueItem, matched bool) VisitEvent {
 	return VisitEvent{
 		Step:       step,
@@ -215,7 +225,9 @@ func buildVisitEvent(step int, current queueItem, matched bool) VisitEvent {
 	}
 }
 
+// normalizeSnippet trims and caps node text so results stay compact.
 func normalizeSnippet(raw string) string {
+	// Keep snippets compact for UI and logs.
 	compact := strings.Join(strings.Fields(strings.TrimSpace(raw)), " ")
 	if len(compact) > 120 {
 		return compact[:117] + "..."
@@ -224,6 +236,7 @@ func normalizeSnippet(raw string) string {
 }
 
 func cloneAttrs(attrs map[string]string) map[string]string {
+	// Return a copied map so stored results are isolated from future node mutations.
 	if len(attrs) == 0 {
 		return nil
 	}
@@ -236,6 +249,7 @@ func cloneAttrs(attrs map[string]string) map[string]string {
 }
 
 func cloneStringSlice(values []string) []string {
+	// Keep path slices immutable once attached into result payloads.
 	if len(values) == 0 {
 		return nil
 	}
