@@ -1,0 +1,157 @@
+package traversal
+
+import (
+	"encoding/json"
+	"testing"
+
+	"github.com/parkuskus/Tubes2_nama_kelompok/src/parser"
+)
+
+// BFS should visit nodes level by level.
+func TestSearchDOMBFSOrder(t *testing.T) {
+	root := sampleTree()
+
+	res, err := SearchDOM(root, SearchRequest{
+		Selector:            "*",
+		Algorithm:           AlgorithmBFS,
+		Limit:               0,
+		IncludeTraversalLog: true,
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	logSearchResult(t, "BFS all nodes", res)
+
+	if res.VisitedCount != 6 {
+		t.Fatalf("expected visited 6, got %d", res.VisitedCount)
+	}
+
+	gotOrder := tagsFromEvents(res.TraversalLog)
+	wantOrder := []string{"html", "body", "footer", "article", "section", "small"}
+	assertStringSliceEqual(t, gotOrder, wantOrder)
+}
+
+// DFS should go deep first before moving to sibling branches.
+func TestSearchDOMDFSOrder(t *testing.T) {
+	root := sampleTree()
+
+	res, err := SearchDOM(root, SearchRequest{
+		Selector:            "*",
+		Algorithm:           AlgorithmDFS,
+		Limit:               0,
+		IncludeTraversalLog: true,
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	logSearchResult(t, "DFS all nodes", res)
+
+	if res.VisitedCount != 6 {
+		t.Fatalf("expected visited 6, got %d", res.VisitedCount)
+	}
+
+	gotOrder := tagsFromEvents(res.TraversalLog)
+	wantOrder := []string{"html", "body", "article", "section", "footer", "small"}
+	assertStringSliceEqual(t, gotOrder, wantOrder)
+}
+
+// Top-N behavior: stop after first match and keep the path to that node.
+func TestSearchDOMLimitAndPath(t *testing.T) {
+	root := sampleTree()
+
+	res, err := SearchDOM(root, SearchRequest{
+		Selector:           ".hit",
+		Algorithm:          AlgorithmBFS,
+		Limit:              1,
+		IncludePathToMatch: true,
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	logSearchResult(t, "BFS class .hit with limit 1", res)
+
+	if len(res.Matches) != 1 {
+		t.Fatalf("expected 1 match, got %d", len(res.Matches))
+	}
+
+	if !res.StoppedByLimit {
+		t.Fatalf("expected StoppedByLimit true")
+	}
+
+	if res.Matches[0].Tag != "article" {
+		t.Fatalf("expected first match tag article, got %s", res.Matches[0].Tag)
+	}
+
+	wantPath := []string{"html", "body", "article"}
+	assertStringSliceEqual(t, res.Matches[0].PathFromRoot, wantPath)
+}
+
+// Validate common bad requests early.
+func TestSearchDOMInvalidInput(t *testing.T) {
+	root := sampleTree()
+
+	_, err := SearchDOM(root, SearchRequest{Selector: "", Algorithm: AlgorithmBFS})
+	if err == nil {
+		t.Fatalf("expected error for empty selector")
+	}
+
+	_, err = SearchDOM(root, SearchRequest{Selector: "*", Algorithm: "RANDOM"})
+	if err == nil {
+		t.Fatalf("expected error for invalid algorithm")
+	}
+
+	_, err = SearchDOM(nil, SearchRequest{Selector: "*", Algorithm: AlgorithmBFS})
+	if err == nil {
+		t.Fatalf("expected error for nil root")
+	}
+}
+
+// Stable test tree used by all traversal test cases.
+func sampleTree() *parser.Node {
+	root := &parser.Node{Tag: "html", Depth: 0, Attributes: map[string]string{}}
+	body := &parser.Node{Tag: "body", Depth: 1, Parent: root, Attributes: map[string]string{}}
+	footer := &parser.Node{Tag: "footer", Depth: 1, Parent: root, Attributes: map[string]string{}}
+	article := &parser.Node{Tag: "article", Depth: 2, Parent: body, Attributes: map[string]string{"class": "hit"}}
+	section := &parser.Node{Tag: "section", Depth: 2, Parent: body, Attributes: map[string]string{"class": "hit"}}
+	small := &parser.Node{Tag: "small", Depth: 2, Parent: footer, Attributes: map[string]string{}}
+
+	root.Children = []*parser.Node{body, footer}
+	body.Children = []*parser.Node{article, section}
+	footer.Children = []*parser.Node{small}
+
+	return root
+}
+
+// Helper for checking visit order.
+func tagsFromEvents(events []VisitEvent) []string {
+	out := make([]string, 0, len(events))
+	for _, event := range events {
+		out = append(out, event.Tag)
+	}
+	return out
+}
+
+func assertStringSliceEqual(t *testing.T, got, want []string) {
+	t.Helper()
+	if len(got) != len(want) {
+		// Verbose mode output to inspect full SearchResult payload quickly.
+		t.Fatalf("slice length mismatch: got %d, want %d", len(got), len(want))
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("slice mismatch at index %d: got %s, want %s", i, got[i], want[i])
+		}
+	}
+}
+
+func logSearchResult(t *testing.T, label string, res SearchResult) {
+	t.Helper()
+
+	pretty, err := json.MarshalIndent(res, "", "  ")
+	if err != nil {
+		t.Logf("%s SearchResult (fallback): %+v", label, res)
+		return
+	}
+
+	t.Logf("%s SearchResult:\n%s", label, pretty)
+}
