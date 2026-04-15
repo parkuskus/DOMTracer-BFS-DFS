@@ -1,0 +1,93 @@
+\section{Deskripsi Tugas}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{01-pendahuluan/struktur-pohon.png}
+    \caption{Struktur Pohon DOM}
+\end{figure}
+Document Object Model (DOM) merupakan representasi terstruktur dari dokumen HTML dalam bentuk tree yang memungkinkan setiap elemen pada halaman web diakses, dimodifikasi, dan dimanipulasi oleh program. Struktur ini merepresentasikan hubungan antar elemen HTML seperti parent, child, dan sibling sehingga memudahkan pengolahan dokumen secara terprogram. Struktur sebuah file HTML pada umumnya meliputi elemen root <html> yang berisi dua bagian utama yaitu <head> dan <body>. Bagian <head> berisi metadata seperti judul halaman, link stylesheet, dan script, sedangkan <body> berisi konten utama halaman seperti teks, gambar, tombol, dan elemen HTML lainnya yang ditampilkan kepada pengguna.
+
+Sebuah website menampilkan sebuah DOM melalui sebuah file bernama Cascading Style Sheets (CSS) yang bertujuan mendeklarasikan visualisasi elemen-elemen pada pohon. Deklarasi visualisasi ditempelkan pada elemen-elemen yang berkaitan melalui CSS Selector. Pada Tugas Besar 2 Strategi Algoritma ini, mahasiswa diminta untuk menelusuri dan mencari elemen pada struktur DOM berdasarkan CSS Selector tertentu dengan menggunakan algoritma penelusuran graf yaitu Breadth First Search (BFS) dan Depth First Search (DFS). Algoritma tersebut digunakan untuk menjelajahi struktur pohon DOM guna menemukan elemen yang sesuai dengan selector yang diberikan.
+
+Komponen-komponen penting yang terdapat pada tugas besar ini antara lain:
+\begin{enumerate}
+    \item \textbf{Tags} pada HTML merupakan penanda (markup) yang digunakan untuk mendefinisikan struktur dan jenis elemen dalam sebuah dokumen HTML. Tag memberi tahu browser bagaimana suatu bagian konten harus ditafsirkan dan ditampilkan pada halaman web.
+          \begin{figure}[H]
+              \centering
+              \includegraphics[width=0.7\textwidth] {01-pendahuluan/syntax-html.png}
+              \caption{Struktur Pohon DOM}
+          \end{figure}
+          Secara umum, tag HTML ditulis menggunakan tanda kurung sudut (\texttt{<>}). Sebagian besar elemen HTML memiliki pasangan tag pembuka dan tag penutup. Tag pembuka menandai awal suatu elemen, sedangkan tag penutup menandai akhir elemen tersebut. Tag penutup ditulis dengan menambahkan tanda garis miring/sebelum nama tag. Terdapat beberapa jenis tag HTML yang self-closing.
+
+          Dalam struktur DOM, setiap tag HTML direpresentasikan sebagai node pada pohon DOM. Hubungan antar tag membentuk struktur hierarki seperti parent, child, dan sibling. Struktur inilah yang memungkinkan dokumen HTML diproses sebagai sebuah pohon ketika dilakukan penelusuran menggunakan algoritma seperti BFS atau DFS.
+    \item \textbf{CSS Selector} adalah mekanisme pada CSS untuk memilih elemen HTML tertentu pada struktur DOM agar dapat diberikan aturan style. Dengan selector, kita dapat menentukan elemen mana yang akan dikenai aturan visual seperti warna, ukuran, atau tata letak.
+          \begin{figure}[H]
+              \centering
+              \includegraphics[width=0.4\textwidth] {01-pendahuluan/css-selector.png}
+              \caption{Struktur Pohon DOM}
+          \end{figure}
+
+          Beberapa selector dasar yang umum digunakan adalah sebagai berikut.
+          \begin{enumerate}
+              \item \textbf{Tag Selector}. Memilih elemen berdasarkan nama tag HTML. Contoh: \texttt{p} memilih semua elemen \texttt{<p>}.
+              \item \textbf{Class Selector}. Memilih elemen yang memiliki atribut class tertentu, ditulis dengan tanda titik (.). Contoh: \texttt{.box}.
+              \item \textbf{ID Selector}. Memilih elemen dengan atribut id tertentu, ditulis dengan tanda pagar (\#). Contoh: \texttt{\#header}
+              \item \textbf{Universal Selector}. Memilih semua elemen HTML. Contoh: *.
+          \end{enumerate}
+          Combinator merupakan cara untuk menggabungkan beberapa jenis selector dalam penentuan elemen yang akan terpengaruh, dan terdiri dari list berikut ini.
+          \begin{enumerate}
+              \item Child Combinator (\texttt{>})
+              \item Descendent Combinator (\texttt{“ “})
+              \item Adjacent Sibling Combinator (\texttt{+})
+              \item General Sibling Combinator (\texttt{~})
+          \end{enumerate}
+
+    \item \textbf{HTML Parsing} adalah Proses membaca dokumen HTML dan mengubahnya menjadi struktur data pohon (tree) yang merepresentasikan hubungan antar elemen HTML. Pada proses ini, parser memproses dokumen HTML secara berurutan, mengenali tag pembuka dan tag penutup, kemudian menyusunnya ke dalam struktur hierarki.
+          \begin{figure}[H]
+              \centering
+              \includegraphics[width=0.4\textwidth] {01-pendahuluan/parsing-html.png}
+              \caption{Struktur Pohon DOM}
+          \end{figure}
+
+          Setiap tag HTML direpresentasikan sebagai node pada pohon. Tag yang berada di dalam tag lain akan menjadi child node, sedangkan tag yang membungkusnya menjadi parent node. Node paling atas pada struktur ini disebut root, yang umumnya merupakan elemen <html>. Dari node root tersebut, elemen-elemen lain seperti \texttt{<head>} dan \texttt{<body>} akan menjadi cabang yang membentuk struktur pohon DOM.
+
+          Hasil dari proses parsing adalah DOM Tree, yaitu representasi pohon dari dokumen HTML yang memungkinkan elemen-elemen pada halaman web ditelusuri, diakses, dan dimanipulasi secara terstruktur. Struktur pohon ini kemudian dapat digunakan dalam proses penelusuran elemen, misalnya dengan menggunakan algoritma Breadth First Search (BFS) atau Depth First Search (DFS).
+\end{enumerate}
+
+\section{Spesifikasi Wajib}
+Pada tugas ini, mahasiswa diminta untuk membuat aplikasi traversal pohon HTML (DOM Tree) yang menggunakan algoritma Breadth First Search (BFS) dan Depth First Search (DFS) untuk melakukan pencarian elemen berdasarkan CSS selector pada struktur DOM.
+\begin{itemize}
+    \item Buatlah sebuah aplikasi berbasis web yang terdiri dari frontend bebas dan backend dalam bahasa Go, C\#, Rust, atau Typescript yang mengimplementasikan algoritma BFS dan DFS untuk melakukan penelusuran CSS pada pohon DOM.
+    \item Aplikasi dapat melakukan scraping HTML dari sebuah website melalui URL yang diberikan oleh pengguna.
+    \item Secara umum, berikut adalah input yang diharapkan.
+          \begin{itemize}
+              \item URL website atau memasuki teks HTML sendiri
+              \item Pilihan algoritma traversal (BFS / DFS)
+              \item CSS selector
+              \item Jumlah hasil yang diinginkan:
+                    \begin{itemize}
+                        \item Top \textit{n} kemunculan
+                        \item Semua kemunculan
+                    \end{itemize}
+          \end{itemize}
+    \item HTML yang diperoleh kemudian diparsing menjadi struktur data pohon (DOM Tree).
+    \item Output yang diharapkan adalah sebagai berikut.
+          \begin{enumerate}
+              \item Aplikasi dapat menampilkan visualisasi struktur pohon DOM, disertai dengan keterangan kedalaman maksimum tree.
+              \item Aplikasi dapat menampilkan highlight pada jalur yang di-traversal oleh algoritma penelusuran yang dipilih untuk menandakan elemen-elemen yang terpengaruh.
+              \item Aplikasi dapat menampilkan waktu pencarian serta banyak node yang dikunjungi.
+              \item Setelah melakukan penelusuran, aplikasi menyimpan sebuah traversal log yang memiliki informasi tahapan penelusuran yang dilakukan.
+          \end{enumerate}
+    \item Repository bagian frontend dan backend boleh digabung/dipisah.
+    \item Setiap kelompok harap mengisi nama kelompok dan anggotanya pada link berikut, dengan maksimal tanggal Minggu, 5 April 2026 2026 23.59. Nama kelompok dilarang mengandung unsur SARA, penghinaan, provokasi, atau hal-hal lain yang bertentangan dengan norma hukum.
+    \item Perlu diperhatikan bahwa kelompok tubes untuk mata kuliah ini tidak boleh sama. Jadi jika berkelompok dengan X pada tubes ini, maka pada tubes selanjutnya anda tidak diperkenankan berkelompok dengan X.
+\end{itemize}
+
+\section{Spesifikasi Bonus}
+\begin{itemize}
+    \item \textbf{(4 poin) [Video]} Membuat video tentang aplikasi BFS dan DFS pada penelusuran pohon DOM kemudian mengunggahnya di Youtube. Video dibuat harus memiliki audio dan menampilkan wajah dari setiap anggota kelompok. Untuk contoh video tubes stima tahun-tahun sebelumnya dapat dilihat di Youtube dengan kata kunci “Tubes Stima”, “strategi algoritma”, “Tugas besar stima”, dll. Semakin menarik video, maka semakin banyak poin yang diberikan.
+    \item \textbf{(5 poin) [Deploy]} Aplikasi web yang telah dibuat perlu di deploy menggunakan Microsoft Azure Virtual Machine (VM) sehingga aplikasi dapat diakses secara publik melalui internet. Sebagai mahasiswa, terdapat kredit gratis sebesar \$100 dari Microsoft untuk dapat digunakan hanya dengan menggunakan email kampus ITB. Karena layanan ini menggunakan sistem pembayaran berbasis penggunaan (pay-as-you-go), penggunaan Virtual Machine akan mengurangi kredit yang dimiliki. Oleh karena itu, disarankan untuk mematikan (stop/deallocate) Virtual Machine ketika tidak digunakan agar kredit Azure tidak cepat habis.
+    \item \textbf{(2 Poin) [Docker]} Aplikasi dijalankan menggunakan Docker baik untuk frontend maupun backend.
+    \item \textbf{(6 Poin) [Animasi]} Menampilkan animasi penelusuran pohon DOM untuk segala pencarian.
+    \item \textbf{(3 Poin) [Multithreading]} Mengimplementasikan multithreading pada algoritma BFS dan/atau DFS untuk melakukan traversal pohon DOM secara paralel. Proses traversal dibagi ke beberapa thread/worker sehingga beberapa node dapat diproses secara bersamaan.
+    \item \textbf{(3 Poin) [LCA Binary Lifting]} Mengimplementasikan algoritma Lowest Common Ancestor (LCA) dengan teknik Binary Lifting pada pohon DOM yang dihasilkan dari proses parsing HTML. LCA digunakan untuk menentukan node leluhur terendah yang sama dari dua node dalam sebuah pohon. Dalam konteks DOM, fitur ini dapat digunakan untuk mengetahui elemen HTML terdekat yang menjadi parent bersama dari dua elemen tertentu. Penjelasan lebih lanjut dapat dilihat pada link berikut.
+\end{itemize}
