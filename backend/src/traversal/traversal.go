@@ -23,14 +23,14 @@ type SearchRequest struct {
 }
 
 type SearchResult struct {
-	Matches         []MatchHit
-	VisitedCount    int
-	MaxDepthVisited int
-	DurationMs      int64
-	TraversalLog    []VisitEvent
-	StoppedByLimit  bool
-	AlgorithmUsed   string
-	SelectorUsed    string
+	Matches         []MatchHit   `json:"matches"`
+	VisitedCount    int          `json:"visitedCount"`
+	MaxDepthVisited int          `json:"maxDepthVisited"`
+	DurationMs      int64        `json:"durationMs"`
+	TraversalLog    []VisitEvent `json:"traversalLog,omitempty"`
+	StoppedByLimit  bool         `json:"stoppedByLimit"`
+	AlgorithmUsed   string       `json:"algorithmUsed"`
+	SelectorUsed    string       `json:"selectorUsed"`
 }
 
 type MatchHit struct {
@@ -184,7 +184,7 @@ func processVisit(res *SearchResult, current queueItem, req SearchRequest) (matc
 	}
 
 	// Selector matching is delegated to selector package so traversal stays generic.
-	matched = selector.MatchSelector(current.node, req.Selector)
+	matched = selector.Match(current.node, req.Selector)
 	if matched {
 		hit := MatchHit{
 			NodePath:    current.nodePath,
