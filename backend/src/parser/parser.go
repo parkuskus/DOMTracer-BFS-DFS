@@ -12,11 +12,11 @@ import (
 
 type Node struct {
 	Tag        string            `json:"tag"`
-	Text       string            `json:"text, omitempty"`
-	Attributes map[string]string `json:"attributes, omitempty"`
-	Parent     *Node             `json:"parent, omitempty"`
-	Children   []*Node           `json:"children, omitempty"`
-	Depth      int               `json:"depth, omitempty"`
+	Text       string            `json:"text,omitempty"`
+	Attributes map[string]string `json:"attributes,omitempty"`
+	Parent     *Node             `json:"parent,omitempty"`
+	Children   []*Node           `json:"children,omitempty"`
+	Depth      int               `json:"depth,omitempty"`
 }
 
 var selfClosingTags = map[string]bool{

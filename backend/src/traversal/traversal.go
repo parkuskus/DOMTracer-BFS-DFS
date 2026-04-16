@@ -23,14 +23,14 @@ type SearchRequest struct {
 }
 
 type SearchResult struct {
-	Matches         []MatchHit
-	VisitedCount    int
-	MaxDepthVisited int
-	DurationMs      int64
-	TraversalLog    []VisitEvent
-	StoppedByLimit  bool
-	AlgorithmUsed   string
-	SelectorUsed    string
+	Matches         []MatchHit   `json:"matches"`
+	VisitedCount    int          `json:"visitedCount"`
+	MaxDepthVisited int          `json:"maxDepthVisited"`
+	DurationMs      int64        `json:"durationMs"`
+	TraversalLog    []VisitEvent `json:"traversalLog,omitempty"`
+	StoppedByLimit  bool         `json:"stoppedByLimit"`
+	AlgorithmUsed   string       `json:"algorithmUsed"`
+	SelectorUsed    string       `json:"selectorUsed"`
 }
 
 type MatchHit struct {
