@@ -10,32 +10,23 @@ import TreeNode from "../components/TreeNode";
 import MetricsPanel from "../components/MetricsPanel";
 import TraversalLog from "../components/TraversalLog";
 
+type Tab = "tree" | "log";
+
 export default function App() {
-  // ── State utama aplikasi ──────────────────────────────────────────────────
-  const [appState, setAppState] = useState<AppState>({
-    result: null,
-    isLoading: false,
-    error: null,
-  });
+  const [appState, setAppState] = useState<AppState>({ result: null, isLoading: false, error: null });
+  const [activeTab, setActiveTab] = useState<Tab>("tree");
 
-  // Tab aktif di panel kanan (tree / log)
-  const [activeTab, setActiveTab] = useState<"tree" | "log">("tree");
-
-  // ── Handler submit form ───────────────────────────────────────────────────
-  async function handleFormSubmit(form: FormState) {
-    // Reset state & mulai loading
+  async function handleSubmit(form: FormState) {
     setAppState({ result: null, isLoading: true, error: null });
-
     try {
       const result = await runTraversal(form);
       setAppState({ result, isLoading: false, error: null });
-      // Auto-switch ke tab tree setelah dapat hasil
       setActiveTab("tree");
     } catch (err) {
       setAppState({
         result: null,
         isLoading: false,
-        error: err instanceof Error ? err.message : "Unknown error occurred.",
+        error: err instanceof Error ? err.message : "An unknown error occurred.",
       });
     }
   }
@@ -43,101 +34,89 @@ export default function App() {
   const { result, isLoading, error } = appState;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-200 font-sans">
-      {/* ── Scanline overlay effect ─────────────────────────────────────── */}
-      <div
-        className="pointer-events-none fixed inset-0 z-50 opacity-[0.015]"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.5) 2px, rgba(0,0,0,0.5) 4px)",
-        }}
-      />
+    <div className="min-h-screen bg-slate-50 text-slate-900">
 
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <header className="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {/* Logo/Brand */}
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded border border-cyan-500/60 flex items-center justify-center
-                              shadow-[0_0_12px_rgba(6,182,212,0.3)]">
-                <span className="text-cyan-400 text-xs font-bold">⬡</span>
-              </div>
-              <div>
-                <h1 className="text-sm font-bold text-zinc-100 tracking-wider leading-none">
-                  DOM<span className="text-cyan-400">Tracer</span>
-                </h1>
-                <p className="text-[9px] text-zinc-600 tracking-widest uppercase leading-none mt-0.5">
-                  BFS / DFS CSS Selector Engine
-                </p>
-              </div>
+      {/* ── Header ────────────────────────────────────────────────────── */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
+          {/* Brand */}
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm shadow-blue-200">
+              <span className="text-white text-xs font-black">D</span>
+            </div>
+            <div>
+              <span className="text-sm font-bold text-slate-800 tracking-tight">DOMTracer</span>
+              <span className="ml-2 text-xs text-slate-400 font-medium">BFS / DFS Visualizer</span>
             </div>
           </div>
 
-          {/* Badge keterangan tugas */}
-          <div className="hidden sm:flex items-center gap-2 text-[10px] font-mono text-zinc-600 tracking-wider">
-            <span className="px-2 py-1 border border-zinc-700 rounded">
-              IF2211 · Strategi Algoritma
+          {/* Tags */}
+          <div className="hidden sm:flex items-center gap-2">
+            <span className="px-2.5 py-1 bg-slate-100 text-slate-500 rounded-full text-[10px] font-semibold tracking-widest uppercase">
+              IF2211
             </span>
-            <span className="px-2 py-1 border border-zinc-700 rounded">
+            <span className="px-2.5 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-semibold tracking-widest uppercase">
               Tubes 2
             </span>
           </div>
         </div>
       </header>
 
-      {/* ── Main Layout: dua kolom ──────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-8">
+      {/* ── Two-column layout ─────────────────────────────────────────── */}
+      <div className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-8">
 
-        {/* ╔══ KOLOM KIRI: Form Input ══════════════════════════════════════╗ */}
-        <aside className="space-y-6">
-          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6
-                          shadow-[0_0_40px_rgba(0,0,0,0.4)]">
-            {/* Header panel */}
-            <div className="flex items-center gap-2 mb-6 pb-4 border-b border-zinc-800">
-              <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
-              <h2 className="text-xs font-bold text-zinc-400 tracking-widest uppercase">
+        {/* ╔══ LEFT: Input Panel ════════════════════════════════════════╗ */}
+        <aside>
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+            {/* Panel header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+              <div className="w-1.5 h-4 bg-blue-500 rounded-full" />
+              <h2 className="text-xs font-semibold text-slate-500 tracking-widest uppercase">
                 Configuration
               </h2>
             </div>
-
-            <InputForm onSubmit={handleFormSubmit} isLoading={isLoading} />
+            <div className="px-6 py-5">
+              <InputForm onSubmit={handleSubmit} isLoading={isLoading} />
+            </div>
           </div>
 
-          {/* ── Legend warna node ────────────────────────────────────────── */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-            <h3 className="text-[10px] font-bold text-zinc-500 tracking-widest uppercase mb-3">
+          {/* ── Node legend ────────────────────────────────────────────── */}
+          <div className="mt-4 bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
+            <h3 className="text-[10px] font-semibold text-slate-400 tracking-widest uppercase mb-3">
               Node Legend
             </h3>
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {[
                 {
-                  color: "bg-amber-400/20 ring-amber-400/60 text-amber-300",
-                  label: "Matched Node",
-                  desc: "Node cocok dengan selector",
+                  badge: "bg-emerald-50 ring-1 ring-emerald-300",
+                  dot: "bg-emerald-400",
+                  text: "text-emerald-700",
+                  label: "Matched",
+                  desc: "Matches the CSS selector",
                 },
                 {
-                  color: "bg-cyan-500/15 ring-cyan-500/40 text-cyan-300",
-                  label: "Traversed Node",
-                  desc: "Node dikunjungi algoritma",
+                  badge: "bg-violet-50 ring-1 ring-violet-200",
+                  dot: "bg-violet-400",
+                  text: "text-violet-700",
+                  label: "Traversed",
+                  desc: "Visited by the algorithm",
                 },
                 {
-                  color: "bg-zinc-800 ring-zinc-700 text-zinc-400",
-                  label: "Regular Node",
-                  desc: "Node tidak dikunjungi",
+                  badge: "bg-white ring-1 ring-slate-200 opacity-60",
+                  dot: "bg-slate-300",
+                  text: "text-slate-400",
+                  label: "Unvisited",
+                  desc: "Not visited / outside limit",
                 },
               ].map((item) => (
-                <div key={item.label} className="flex items-center gap-2.5">
-                  <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ring-1 ${item.color}`}
-                  >
-                    &lt;tag&gt;
+                <div key={item.label} className="flex items-center gap-3">
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg ${item.badge}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${item.dot}`} />
+                    <span className={`font-mono text-[10px] font-semibold ${item.text}`}>&lt;tag&gt;</span>
                   </span>
                   <div>
-                    <div className="text-[11px] text-zinc-300 font-medium">
-                      {item.label}
-                    </div>
-                    <div className="text-[10px] text-zinc-600">{item.desc}</div>
+                    <div className="text-xs font-semibold text-slate-600">{item.label}</div>
+                    <div className="text-[10px] text-slate-400">{item.desc}</div>
                   </div>
                 </div>
               ))}
@@ -145,135 +124,127 @@ export default function App() {
           </div>
         </aside>
 
-        {/* ╔══ KOLOM KANAN: Output Panel ═══════════════════════════════════╗ */}
-        <main className="space-y-6 min-w-0">
+        {/* ╔══ RIGHT: Output Panel ══════════════════════════════════════╗ */}
+        <main className="space-y-5 min-w-0">
 
-          {/* ── Loading State ─────────────────────────────────────────────── */}
+          {/* ── Loading ─────────────────────────────────────────────────── */}
           {isLoading && (
-            <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-16 flex flex-col
-                            items-center justify-center gap-6 text-center">
-              {/* Animated spinner */}
-              <div className="relative w-16 h-16">
-                <div className="absolute inset-0 rounded-full border-2 border-zinc-800" />
-                <div className="absolute inset-0 rounded-full border-2 border-t-cyan-400 animate-spin" />
-                <div className="absolute inset-2 rounded-full border-2 border-b-emerald-400 animate-spin"
-                     style={{ animationDirection: "reverse", animationDuration: "0.7s" }} />
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-20 flex flex-col items-center gap-5">
+              <div className="relative w-12 h-12">
+                <div className="absolute inset-0 rounded-full border-2 border-slate-100" />
+                <div className="absolute inset-0 rounded-full border-2 border-t-blue-500 animate-spin" />
+                <div className="absolute inset-2 rounded-full border-2 border-b-violet-400 animate-spin"
+                     style={{ animationDirection: "reverse", animationDuration: "0.75s" }} />
               </div>
-              <div>
-                <p className="text-sm font-mono text-cyan-400 tracking-widest mb-1">
-                  TRAVERSING DOM...
-                </p>
-                <p className="text-xs text-zinc-600 font-mono">
-                  Fetching and parsing the document tree
-                </p>
+              <div className="text-center">
+                <p className="text-sm font-semibold text-slate-700">Traversing DOM…</p>
+                <p className="text-xs text-slate-400 mt-1">Parsing and searching the document tree</p>
               </div>
             </div>
           )}
 
-          {/* ── Error State ───────────────────────────────────────────────── */}
+          {/* ── Error ───────────────────────────────────────────────────── */}
           {error && (
-            <div className="bg-red-950/40 border border-red-500/30 rounded-xl p-6
-                            shadow-[0_0_20px_rgba(239,68,68,0.1)]">
-              <div className="flex items-start gap-3">
-                <span className="text-red-400 text-xl flex-shrink-0">⚠</span>
-                <div>
-                  <h3 className="text-sm font-bold text-red-300 mb-1 font-mono">
-                    Traversal Failed
-                  </h3>
-                  <p className="text-xs text-red-400/80 font-mono leading-relaxed">
-                    {error}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── Empty / Welcome State ─────────────────────────────────────── */}
-          {!isLoading && !error && !result && (
-            <div className="bg-zinc-900 border border-dashed border-zinc-700 rounded-xl p-16
-                            flex flex-col items-center justify-center gap-4 text-center">
-              <div className="text-5xl opacity-20">⬡</div>
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-5 flex gap-3 shadow-sm">
+              <span className="text-red-400 text-lg flex-shrink-0">⚠</span>
               <div>
-                <p className="text-sm text-zinc-500 font-mono">
-                  Configure and run a traversal to see results
-                </p>
-                <p className="text-xs text-zinc-700 font-mono mt-1">
-                  DOM tree visualization will appear here
-                </p>
+                <p className="text-sm font-semibold text-red-700 mb-1">Traversal Failed</p>
+                <p className="text-xs text-red-500 font-mono leading-relaxed">{error}</p>
               </div>
             </div>
           )}
 
-          {/* ── Result State ──────────────────────────────────────────────── */}
+          {/* ── Empty state ─────────────────────────────────────────────── */}
+          {!isLoading && !error && !result && (
+            <div className="bg-white border border-dashed border-slate-200 rounded-2xl p-20 flex flex-col items-center gap-3 text-center shadow-sm">
+              <div className="w-12 h-12 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center text-2xl">
+                🌐
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-500">No traversal yet</p>
+                <p className="text-xs text-slate-400 mt-1">Configure and run a traversal to see the DOM tree</p>
+              </div>
+            </div>
+          )}
+
+          {/* ── Results ─────────────────────────────────────────────────── */}
           {result && !isLoading && (
             <>
-              {/* Metrik Performa */}
-              <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6">
-                <div className="flex items-center gap-2 mb-5 pb-4 border-b border-zinc-800">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                  <h2 className="text-xs font-bold text-zinc-400 tracking-widest uppercase">
+              {/* Metrics */}
+              <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+                  <div className="w-1.5 h-4 bg-emerald-500 rounded-full" />
+                  <h2 className="text-xs font-semibold text-slate-500 tracking-widest uppercase">
                     Performance Metrics
                   </h2>
                 </div>
-                <MetricsPanel
-                  metrics={result.metrics}
-                  algorithm={result.algorithm}
-                  selector={result.selector}
-                />
+                <div className="px-6 py-5">
+                  <MetricsPanel
+                    metrics={result.metrics}
+                    algorithm={result.algorithm}
+                    selector={result.selector}
+                  />
+                </div>
               </div>
 
-              {/* Panel Tab: DOM Tree / Traversal Log */}
-              <div className="bg-zinc-900 border border-zinc-700 rounded-xl overflow-hidden">
-                {/* Tab nav */}
-                <div className="flex border-b border-zinc-700">
+              {/* DOM Tree + Log tabs */}
+              <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                {/* Tab bar */}
+                <div className="flex border-b border-slate-100">
                   {([
-                    { key: "tree", label: "DOM Tree", icon: "⬡" },
-                    { key: "log", label: "Traversal Log", icon: "≡" },
-                  ] as const).map((tab) => (
+                    { key: "tree" as Tab, icon: "⬡", label: "DOM Tree" },
+                    { key: "log"  as Tab, icon: "≡", label: "Traversal Log" },
+                  ]).map((tab) => (
                     <button
                       key={tab.key}
                       onClick={() => setActiveTab(tab.key)}
                       className={[
-                        "flex-1 py-3 text-xs font-bold font-mono tracking-widest uppercase",
-                        "border-b-2 transition-all duration-200",
+                        "flex-1 flex items-center justify-center gap-2 py-3.5 text-xs font-semibold tracking-wide transition-all border-b-2",
                         activeTab === tab.key
-                          ? "border-cyan-400 text-cyan-300 bg-cyan-500/5"
-                          : "border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/40",
+                          ? "border-blue-500 text-blue-600 bg-blue-50/50"
+                          : "border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50",
                       ].join(" ")}
                     >
-                      <span className="mr-2">{tab.icon}</span>
+                      <span>{tab.icon}</span>
                       {tab.label}
                     </button>
                   ))}
                 </div>
 
-                {/* ── DOM Tree Tab ─────────────────────────────────────── */}
+                {/* ── Tree tab ────────────────────────────────────────── */}
                 {activeTab === "tree" && (
-                  <div className="p-5">
-                    {/* Keterangan kedalaman maksimum */}
-                    <div className="flex items-center justify-between mb-4 pb-3 border-b border-zinc-800">
-                      <span className="text-[10px] font-mono text-zinc-600 tracking-wider">
-                        MAX DEPTH:{" "}
-                        <span className="text-purple-400 font-bold">
-                          {result.metrics.maxDepth}
-                        </span>{" "}
-                        LEVELS
-                      </span>
-                      <span className="text-[10px] font-mono text-zinc-600">
-                        ▸ Click nodes to expand/collapse
+                  <div className="p-6">
+                    {/* Tree meta info */}
+                    <div className="flex items-center justify-between mb-5 pb-4 border-b border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-slate-500 font-medium">
+                          Max depth:
+                          <span className="ml-1.5 px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-mono font-semibold text-[10px]">
+                            {result.metrics.maxDepth} levels
+                          </span>
+                        </span>
+                        <span className="text-xs text-slate-500 font-medium">
+                          Visited:
+                          <span className="ml-1.5 px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full font-mono font-semibold text-[10px]">
+                            {result.metrics.visitedNodeCount} nodes
+                          </span>
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-300 font-mono">
+                        click [+] to expand nodes
                       </span>
                     </div>
 
-                    {/* Pohon DOM rekursif */}
-                    <div className="overflow-x-auto">
+                    {/* Scrollable tree area */}
+                    <div className="overflow-auto max-h-[560px] pr-2">
                       <TreeNode node={result.tree} />
                     </div>
                   </div>
                 )}
 
-                {/* ── Traversal Log Tab ────────────────────────────────── */}
+                {/* ── Log tab ─────────────────────────────────────────── */}
                 {activeTab === "log" && (
-                  <div className="p-5">
+                  <div className="p-6">
                     <TraversalLog
                       logs={result.traversalLog}
                       algorithm={result.algorithm}
