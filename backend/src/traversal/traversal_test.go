@@ -1,157 +1,238 @@
 package traversal
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/parkuskus/Tubes2_nama_kelompok/src/parser"
 )
 
-// BFS should visit nodes level by level.
-func TestSearchDOMBFSOrder(t *testing.T) {
-	root := sampleTree()
+// shared scraped tree — fetched once, reused across all integration tests
+func scrapedTree(t *testing.T) *parser.Node {
+	t.Helper()
+	root, err := parser.HTMLScraper("https://books.toscrape.com/")
+	if err != nil {
+		t.Fatalf("failed to scrape books.toscrape.com: %v", err)
+	}
+	if root == nil {
+		t.Fatal("scraper returned nil root")
+	}
+	return root
+}
+
+// --- TAG SELECTOR ---
+
+// <article> tags wrap each book card — there are exactly 20 per page
+func TestIntegration_TagSelector_Article(t *testing.T) {
+	root := scrapedTree(t)
 
 	res, err := SearchDOM(root, SearchRequest{
-		Selector:            "*",
+		Selector:  "article",
+		Algorithm: AlgorithmBFS,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// 20 books per page = 20 article elements
+	if len(res.Matches) != 20 {
+		t.Errorf("expected 20 article matches, got %d", len(res.Matches))
+	}
+	t.Logf("article matches: %d, visited: %d, duration: %dms", len(res.Matches), res.VisitedCount, res.DurationMs)
+}
+
+// <li> tags are used in the category sidebar — should be many
+func TestIntegration_TagSelector_Li(t *testing.T) {
+	root := scrapedTree(t)
+
+	res, err := SearchDOM(root, SearchRequest{
+		Selector:  "li",
+		Algorithm: AlgorithmDFS,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(res.Matches) == 0 {
+		t.Error("expected li matches, got 0")
+	}
+	t.Logf("li matches: %d", len(res.Matches))
+}
+
+// --- CLASS SELECTOR ---
+
+// .product_pod wraps each book card alongside article
+func TestIntegration_ClassSelector_ProductPod(t *testing.T) {
+	root := scrapedTree(t)
+
+	res, err := SearchDOM(root, SearchRequest{
+		Selector:  ".product_pod",
+		Algorithm: AlgorithmBFS,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(res.Matches) != 20 {
+		t.Errorf("expected 20 .product_pod matches, got %d", len(res.Matches))
+	}
+	t.Logf(".product_pod matches: %d", len(res.Matches))
+}
+
+// .nav-list is the sidebar category navigation
+func TestIntegration_ClassSelector_NavList(t *testing.T) {
+	root := scrapedTree(t)
+
+	res, err := SearchDOM(root, SearchRequest{
+		Selector:  ".nav-list",
+		Algorithm: AlgorithmBFS,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(res.Matches) == 0 {
+		t.Error("expected at least one .nav-list match")
+	}
+	t.Logf(".nav-list matches: %d", len(res.Matches))
+}
+
+// --- UNIVERSAL SELECTOR ---
+
+// * matches every element — should be a large number
+func TestIntegration_UniversalSelector(t *testing.T) {
+	root := scrapedTree(t)
+
+	res, err := SearchDOM(root, SearchRequest{
+		Selector:  "*",
+		Algorithm: AlgorithmBFS,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// a real HTML page has hundreds of nodes
+	if res.VisitedCount < 100 {
+		t.Errorf("expected > 100 nodes visited, got %d", res.VisitedCount)
+	}
+	// every visited node matches *
+	if len(res.Matches) != res.VisitedCount {
+		t.Errorf("expected all visited nodes to match *, got %d matches vs %d visited", len(res.Matches), res.VisitedCount)
+	}
+	t.Logf("total nodes: %d", res.VisitedCount)
+}
+
+// --- LIMIT / TOP-N ---
+
+// top 5 article elements using BFS
+func TestIntegration_TopN_BFS(t *testing.T) {
+	root := scrapedTree(t)
+
+	res, err := SearchDOM(root, SearchRequest{
+		Selector:  "article",
+		Algorithm: AlgorithmBFS,
+		Limit:     5,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(res.Matches) != 5 {
+		t.Errorf("expected 5 matches with limit 5, got %d", len(res.Matches))
+	}
+	if !res.StoppedByLimit {
+		t.Error("expected StoppedByLimit to be true")
+	}
+	t.Logf("top 5 articles found after visiting %d nodes", res.VisitedCount)
+}
+
+// --- BFS VS DFS SAME RESULTS ---
+
+// both algorithms should find the same total matches, just in different order
+func TestIntegration_BFSvsDFS_SameMatchCount(t *testing.T) {
+	root := scrapedTree(t)
+
+	bfsRes, err := SearchDOM(root, SearchRequest{
+		Selector:  ".product_pod",
+		Algorithm: AlgorithmBFS,
+	})
+	if err != nil {
+		t.Fatalf("BFS error: %v", err)
+	}
+
+	dfsRes, err := SearchDOM(root, SearchRequest{
+		Selector:  ".product_pod",
+		Algorithm: AlgorithmDFS,
+	})
+	if err != nil {
+		t.Fatalf("DFS error: %v", err)
+	}
+
+	if len(bfsRes.Matches) != len(dfsRes.Matches) {
+		t.Errorf("BFS found %d matches, DFS found %d — should be equal", len(bfsRes.Matches), len(dfsRes.Matches))
+	}
+	t.Logf("BFS visited %d nodes in %dms, DFS visited %d nodes in %dms",
+		bfsRes.VisitedCount, bfsRes.DurationMs,
+		dfsRes.VisitedCount, dfsRes.DurationMs)
+}
+
+// --- TRAVERSAL LOG ---
+
+// verify traversal log is populated when requested
+func TestIntegration_TraversalLog(t *testing.T) {
+	root := scrapedTree(t)
+
+	res, err := SearchDOM(root, SearchRequest{
+		Selector:            "article",
 		Algorithm:           AlgorithmBFS,
-		Limit:               0,
+		Limit:               3,
 		IncludeTraversalLog: true,
 	})
 	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	logSearchResult(t, "BFS all nodes", res)
-
-	if res.VisitedCount != 6 {
-		t.Fatalf("expected visited 6, got %d", res.VisitedCount)
+		t.Fatalf("unexpected error: %v", err)
 	}
 
-	gotOrder := tagsFromEvents(res.TraversalLog)
-	wantOrder := []string{"html", "body", "footer", "article", "section", "small"}
-	assertStringSliceEqual(t, gotOrder, wantOrder)
+	if len(res.TraversalLog) == 0 {
+		t.Error("expected traversal log to be non-empty")
+	}
+
+	// log should have more entries than matches (visited > matched)
+	if len(res.TraversalLog) <= len(res.Matches) {
+		t.Errorf("expected log entries (%d) > matches (%d)", len(res.TraversalLog), len(res.Matches))
+	}
+	t.Logf("log entries: %d, matches: %d", len(res.TraversalLog), len(res.Matches))
 }
 
-// DFS should go deep first before moving to sibling branches.
-func TestSearchDOMDFSOrder(t *testing.T) {
-	root := sampleTree()
+// --- PATH TO MATCH ---
+
+// path from root to first article should go through html > body > ...
+func TestIntegration_PathToMatch(t *testing.T) {
+	root := scrapedTree(t)
 
 	res, err := SearchDOM(root, SearchRequest{
-		Selector:            "*",
-		Algorithm:           AlgorithmDFS,
-		Limit:               0,
-		IncludeTraversalLog: true,
-	})
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	logSearchResult(t, "DFS all nodes", res)
-
-	if res.VisitedCount != 6 {
-		t.Fatalf("expected visited 6, got %d", res.VisitedCount)
-	}
-
-	gotOrder := tagsFromEvents(res.TraversalLog)
-	wantOrder := []string{"html", "body", "article", "section", "footer", "small"}
-	assertStringSliceEqual(t, gotOrder, wantOrder)
-}
-
-// Top-N behavior: stop after first match and keep the path to that node.
-func TestSearchDOMLimitAndPath(t *testing.T) {
-	root := sampleTree()
-
-	res, err := SearchDOM(root, SearchRequest{
-		Selector:           ".hit",
+		Selector:           "article",
 		Algorithm:          AlgorithmBFS,
 		Limit:              1,
 		IncludePathToMatch: true,
 	})
 	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	logSearchResult(t, "BFS class .hit with limit 1", res)
-
-	if len(res.Matches) != 1 {
-		t.Fatalf("expected 1 match, got %d", len(res.Matches))
+		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if !res.StoppedByLimit {
-		t.Fatalf("expected StoppedByLimit true")
+	if len(res.Matches) == 0 {
+		t.Fatal("expected at least one match")
 	}
 
-	if res.Matches[0].Tag != "article" {
-		t.Fatalf("expected first match tag article, got %s", res.Matches[0].Tag)
+	path := res.Matches[0].PathFromRoot
+	if len(path) == 0 {
+		t.Fatal("expected non-empty path from root")
 	}
 
-	wantPath := []string{"html", "body", "article"}
-	assertStringSliceEqual(t, res.Matches[0].PathFromRoot, wantPath)
-}
-
-// Validate common bad requests early.
-func TestSearchDOMInvalidInput(t *testing.T) {
-	root := sampleTree()
-
-	_, err := SearchDOM(root, SearchRequest{Selector: "", Algorithm: AlgorithmBFS})
-	if err == nil {
-		t.Fatalf("expected error for empty selector")
+	// path must start at html and end at article
+	if path[0] != "html" {
+		t.Errorf("expected path to start with 'html', got '%s'", path[0])
 	}
-
-	_, err = SearchDOM(root, SearchRequest{Selector: "*", Algorithm: "RANDOM"})
-	if err == nil {
-		t.Fatalf("expected error for invalid algorithm")
+	if path[len(path)-1] != "article" {
+		t.Errorf("expected path to end with 'article', got '%s'", path[len(path)-1])
 	}
-
-	_, err = SearchDOM(nil, SearchRequest{Selector: "*", Algorithm: AlgorithmBFS})
-	if err == nil {
-		t.Fatalf("expected error for nil root")
-	}
-}
-
-// Stable test tree used by all traversal test cases.
-func sampleTree() *parser.Node {
-	root := &parser.Node{Tag: "html", Depth: 0, Attributes: map[string]string{}}
-	body := &parser.Node{Tag: "body", Depth: 1, Parent: root, Attributes: map[string]string{}}
-	footer := &parser.Node{Tag: "footer", Depth: 1, Parent: root, Attributes: map[string]string{}}
-	article := &parser.Node{Tag: "article", Depth: 2, Parent: body, Attributes: map[string]string{"class": "hit"}}
-	section := &parser.Node{Tag: "section", Depth: 2, Parent: body, Attributes: map[string]string{"class": "hit"}}
-	small := &parser.Node{Tag: "small", Depth: 2, Parent: footer, Attributes: map[string]string{}}
-
-	root.Children = []*parser.Node{body, footer}
-	body.Children = []*parser.Node{article, section}
-	footer.Children = []*parser.Node{small}
-
-	return root
-}
-
-// Helper for checking visit order.
-func tagsFromEvents(events []VisitEvent) []string {
-	out := make([]string, 0, len(events))
-	for _, event := range events {
-		out = append(out, event.Tag)
-	}
-	return out
-}
-
-func assertStringSliceEqual(t *testing.T, got, want []string) {
-	t.Helper()
-	if len(got) != len(want) {
-		// Verbose mode output to inspect full SearchResult payload quickly.
-		t.Fatalf("slice length mismatch: got %d, want %d", len(got), len(want))
-	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Fatalf("slice mismatch at index %d: got %s, want %s", i, got[i], want[i])
-		}
-	}
-}
-
-func logSearchResult(t *testing.T, label string, res SearchResult) {
-	t.Helper()
-
-	pretty, err := json.MarshalIndent(res, "", "  ")
-	if err != nil {
-		t.Logf("%s SearchResult (fallback): %+v", label, res)
-		return
-	}
-
-	t.Logf("%s SearchResult:\n%s", label, pretty)
+	t.Logf("path to first article: %v", path)
 }

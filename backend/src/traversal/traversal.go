@@ -184,7 +184,7 @@ func processVisit(res *SearchResult, current queueItem, req SearchRequest) (matc
 	}
 
 	// Selector matching is delegated to selector package so traversal stays generic.
-	matched = selector.MatchSelector(current.node, req.Selector)
+	matched = selector.Match(current.node, req.Selector)
 	if matched {
 		hit := MatchHit{
 			NodePath:    current.nodePath,
