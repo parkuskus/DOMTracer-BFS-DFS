@@ -35,3 +35,32 @@ func TestMatchesSimple(t *testing.T) {
 		}
 	}
 }
+func TestMatchesSelector(t *testing.T) {
+	div := &parser.Node{Tag: "div"}
+	p := &parser.Node{Tag: "p", Parent: div}
+	span := &parser.Node{Tag: "span", Attributes: map[string]string{"class": "box"}, Parent: p}
+	div.Children = []*parser.Node{p}
+	p.Children = []*parser.Node{span}
+
+	cases := []struct {
+		node     *parser.Node
+		selector string
+		expected bool
+	}{
+		{span, "span", true},
+		{span, ".box", true},
+		{p, "div > p", true},
+		{span, "div > span", false},
+		{p, "div p", true},
+		{span, "div span", true},
+		{span, "p > span", true},
+		{span, "p + span", false},
+	}
+
+	for _, c := range cases {
+		result := Match(c.node, c.selector)
+		if result != c.expected {
+			t.Errorf("matchesSelector(%s, %q) = %v, want %v", c.node.Tag, c.selector, result, c.expected)
+		}
+	}
+}
