@@ -34,21 +34,61 @@
   --accent-mid:     #BFDBFE;
 
   /* Semantic */
-  --match-color:    #059669;  /* emerald — matched node */
+  --match-color:    #059669;
   --match-light:    #ECFDF5;
   --match-mid:      #A7F3D0;
 
-  --visit-color:    #7C3AED;  /* violet — traversed node */
+  --visit-color:    #7C3AED;
   --visit-light:    #F5F3FF;
   --visit-mid:      #DDD6FE;
 
   /* Tree connector */
   --connector:      #CBD5E1;
+
+  /* shadcn compat (HSL, no hsl() wrapper) */
+  --background: 210 40% 98%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --primary: 221 83% 53%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 222 47% 11%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 221 83% 53%;
+  --radius: 0.75rem;
+
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: 222 47% 11%;
+  --sidebar-primary: 221 83% 53%;
+  --sidebar-primary-foreground: 210 40% 98%;
+  --sidebar-accent: 210 40% 96%;
+  --sidebar-accent-foreground: 222 47% 11%;
+  --sidebar-border: 214 32% 91%;
+  --sidebar-ring: 221 83% 53%;
 }
 
 @layer base {
   html { font-family: var(--font-ui); color-scheme: light; }
-  body { @apply bg-slate-50 text-slate-900; -webkit-font-smoothing: antialiased; }
+  body {
+    @apply text-slate-900;
+    -webkit-font-smoothing: antialiased;
+    background:
+      radial-gradient(1200px 600px at 10% -10%, rgba(96,165,250,0.18), transparent 60%),
+      radial-gradient(900px 500px at 100% 10%, rgba(167,139,250,0.16), transparent 60%),
+      radial-gradient(700px 500px at 50% 100%, rgba(52,211,153,0.10), transparent 60%),
+      linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+    background-attachment: fixed;
+  }
 
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: var(--bg-subtle); }
@@ -59,8 +99,41 @@
 @layer utilities {
   .font-mono { font-family: var(--font-mono); }
 
+  /* ── Glassmorphism ──────────────────────────────────────────── */
+  .glass {
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.6) inset,
+      0 10px 30px -12px rgba(15, 23, 42, 0.12);
+  }
+  .glass-strong {
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.7) inset,
+      0 12px 40px -16px rgba(15, 23, 42, 0.15);
+  }
+  .glass-subtle {
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+  }
+
+  /* Text gradients */
+  .text-gradient {
+    background: linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #10b981 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
   /* ── Tree connector lines ─────────────────────────────────── */
-  /* Vertical trunk running down beside children */
   .tree-children {
     position: relative;
     padding-left: 1.5rem;
@@ -68,7 +141,6 @@
     border-left: 1.5px solid var(--connector);
   }
 
-  /* Horizontal branch to each child node */
   .tree-child-row {
     position: relative;
   }
@@ -76,13 +148,12 @@
     content: '';
     position: absolute;
     left: -1.5rem;
-    top: 1.0625rem;  /* vertically center on the node badge */
+    top: 1.0625rem;
     width: 1.25rem;
     height: 1.5px;
     background: var(--connector);
   }
 
-  /* Last child: clip the vertical trunk */
   .tree-child-row:last-child::after {
     content: '';
     position: absolute;

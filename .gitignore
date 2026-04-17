@@ -41,6 +41,9 @@ docs/*.toc
 docs/*.synctex.gz
 docs/*.md
 
+# Node.js
+node_modules/
+
 # Editor/IDE
 # .idea/
 # .vscode/
