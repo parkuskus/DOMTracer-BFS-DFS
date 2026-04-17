@@ -1,0 +1,39 @@
+{
+  "description": "Class selector with DFS and Top-N limit",
+  "input": {
+    "htmlFile": "test/cases/case03_limit_topn.html",
+    "selector": ".entry",
+    "algorithm": "DFS",
+    "limit": 2,
+    "includePathToMatch": false,
+    "includeTraversalLog": false
+  },
+  "expected": {
+    "matchCount": 2,
+    "visitedCount": 5,
+    "maxDepthVisited": 4,
+    "stoppedByLimit": true,
+    "matches": [
+      {
+        "nodePath": "0/0/0/0",
+        "tag": "li",
+        "depth": 3,
+        "visitStep": 4,
+        "attributes": {
+          "class": "entry"
+        },
+        "textSnippet": "One"
+      },
+      {
+        "nodePath": "0/0/0/0/0",
+        "tag": "li",
+        "depth": 4,
+        "visitStep": 5,
+        "attributes": {
+          "class": "entry"
+        },
+        "textSnippet": "Two"
+      }
+    ]
+  }
+}

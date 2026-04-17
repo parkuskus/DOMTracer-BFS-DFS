@@ -1,0 +1,41 @@
+{
+  "description": "Tag selector for article nodes with BFS (all matches)",
+  "input": {
+    "htmlFile": "test/cases/case01_basic_article.html",
+    "selector": "article",
+    "algorithm": "BFS",
+    "limit": 0,
+    "includePathToMatch": true,
+    "includeTraversalLog": false
+  },
+  "expected": {
+    "matchCount": 2,
+    "visitedCount": 5,
+    "maxDepthVisited": 4,
+    "stoppedByLimit": false,
+    "matches": [
+      {
+        "nodePath": "0/0/0/0",
+        "tag": "article",
+        "depth": 3,
+        "visitStep": 4,
+        "attributes": {
+          "class": "item featured"
+        },
+        "textSnippet": "Alpha",
+        "pathFromRoot": ["html", "body", "section", "article"]
+      },
+      {
+        "nodePath": "0/0/0/0/0",
+        "tag": "article",
+        "depth": 4,
+        "visitStep": 5,
+        "attributes": {
+          "class": "item"
+        },
+        "textSnippet": "Beta",
+        "pathFromRoot": ["html", "body", "section", "article", "article"]
+      }
+    ]
+  }
+}
