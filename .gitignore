@@ -45,3 +45,6 @@ docs/*.md
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Program logs
+backend\logs
