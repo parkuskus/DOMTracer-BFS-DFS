@@ -147,7 +147,7 @@ func promptLimit(reader *bufio.Reader) int {
 	}
 
 	for {
-		raw := readLine(reader, "Masukkan nilai N (>0)", "10")
+		raw := readLine(reader, "Masukkan nilai N (N > 0)", "10")
 		n, err := strconv.Atoi(strings.TrimSpace(raw))
 		if err == nil && n > 0 {
 			return n
@@ -215,7 +215,7 @@ func promptMultilineHTML(reader *bufio.Reader) string {
 
 func readLine(reader *bufio.Reader, label string, defaultValue string) string {
 	if defaultValue != "" {
-		fmt.Printf("%s [%s]: ", label, defaultValue)
+		fmt.Printf("%s [%s] (default): ", label, defaultValue)
 	} else {
 		fmt.Printf("%s: ", label)
 	}
