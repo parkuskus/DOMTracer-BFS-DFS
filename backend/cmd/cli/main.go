@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -203,12 +204,18 @@ func promptMultilineHTML(reader *bufio.Reader) string {
 	fmt.Println("Tempel HTML manual. Ketik END pada baris baru untuk selesai.")
 	lines := make([]string, 0)
 	for {
-		line, _ := reader.ReadString('\n')
+		line, err := reader.ReadString('\n')
 		line = strings.TrimRight(line, "\r\n")
 		if strings.EqualFold(strings.TrimSpace(line), "END") {
 			break
 		}
 		lines = append(lines, line)
+		if err != nil {
+			if err != io.EOF {
+				fmt.Printf("Input terhenti karena error: %v\n", err)
+			}
+			break
+		}
 	}
 	return strings.Join(lines, "\n")
 }
