@@ -206,10 +206,17 @@ func promptMultilineHTML(reader *bufio.Reader) string {
 	for {
 		line, err := reader.ReadString('\n')
 		line = strings.TrimRight(line, "\r\n")
-		if strings.EqualFold(strings.TrimSpace(line), "END") {
+		isEnd := strings.EqualFold(strings.TrimSpace(line), "END")
+
+		if isEnd {
 			break
 		}
-		lines = append(lines, line)
+
+		shouldAppend := !isEnd && (err == nil || line != "")
+		if shouldAppend {
+			lines = append(lines, line)
+		}
+
 		if err != nil {
 			if err != io.EOF {
 				fmt.Printf("Input terhenti karena error: %v\n", err)
