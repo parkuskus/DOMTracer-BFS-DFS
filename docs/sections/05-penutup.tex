@@ -1,6 +1,27 @@
+\section{Kesimpulan}
+
+Sebagai penutup, DOMTracer merupakan sebuah program yang mengemulasi cara kerja CSS Selector dalam memilih elemen-elemen bersesuaian dengan pada sebuah Document Object Model (DOM). Dalam program ini, DOM direpresentasikan sebagai struktur pohon dan kemudian diproses dengan menggunakan prinsip traversal graf/pohon berbasis algoritma Breadth-First Search (BFS) dan Depth-First Search (DFS). Ide besar ini kemudian diterjemahkan menjadi rancangan sistem yang modular melalui pemisahan komponen parser, selector, dan traversal agar alur pemrosesan HTML menjadi jelas dan terstruktur.
+
+Pada sisi implementasi, kami berhasil membangun alur lengkap dari masukan HTML, proses parsing menjadi struktur node, pencarian elemen berdasarkan selector, hingga penyajian hasil melalui antarmuka CLI. Fitur-fitur pendukung seperti pilihan sumber input (URL, HTML manual, dan file), pembatasan jumlah hasil (Top-N), serta pencatatan traversal log menunjukkan bahwa solusi tidak hanya berjalan secara fungsional, tetapi juga memperhatikan aspek kegunaan dan observabilitas proses.
+
+Selama pengerjaan, banyak ilmu yang diperoleh, terutama dalam menghubungkan konsep algoritma yang dipelajari di kelas dengan kebutuhan rekayasa perangkat lunak nyata. Kami belajar bahwa pemilihan strategi traversal memengaruhi urutan kunjungan dan performa praktis, bahwa desain struktur data sangat menentukan kemudahan pengembangan fitur lanjutan, serta bahwa pengujian berbasis kasus berperan penting untuk menjaga ketahanan program pada input yang beragam, termasuk kasus batas dan input tidak valid.
+
+Refleksi utama dari tugas besar ini adalah pentingnya berpikir sistematis dari definisi masalah, perancangan solusi, implementasi bertahap, hingga validasi hasil. Pengalaman ini menjadi bekal berharga untuk proyek-proyek di masa depan, khususnya dalam menerapkan algoritma secara kontekstual, menulis kode yang mudah dirawat, dan membangun kebiasaan verifikasi yang disiplin sebelum perangkat lunak digunakan lebih luas.
+
+\section{Saran}
+
+Program ini masih dapat dikembangkan lebih lanjut agar semakin kuat dan mendekati kebutuhan aplikasi nyata. Beberapa pengembangan yang disarankan adalah sebagai berikut.
+
+\begin{enumerate}
+    \item Menambah dukungan CSS selector yang lebih lengkap, seperti selector gabungan yang lebih kompleks, pseudo-class tertentu, dan validasi sintaks selector yang lebih informatif.
+    \item Mengoptimalkan performa parser dan traversal untuk dokumen HTML yang sangat besar, misalnya melalui pendekatan streaming parse, caching hasil seleksi tertentu, atau strategi pruning pada proses pencarian.
+    \item Memperluas pengujian otomatis, termasuk benchmark performa, property-based testing, dan pengujian terintegrasi pada pipeline CI.
+\end{enumerate}
+
 Tugas ini disusun sepenuhnya tanpa bantuan kecerdasan buatan (Generative AI), melainkan hasil pemikiran dan analisis mandiri.
 \\
 \begin{flushright}
+    Bandung, 19 April 2026\\
     \includegraphics[width=0.4\textwidth]{ttd_hafizh.jpeg}\\
     Moh. Hafizh Irham Perdana
 \end{flushright}

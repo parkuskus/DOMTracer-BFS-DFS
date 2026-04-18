@@ -39,7 +39,6 @@ docs/*.lot
 docs/*.out
 docs/*.toc
 docs/*.synctex.gz
-docs/*.pdf
 docs/*.md
 
 # Editor/IDE
