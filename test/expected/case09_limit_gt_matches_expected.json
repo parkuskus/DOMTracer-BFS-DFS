@@ -1,0 +1,37 @@
+{
+  "description": "Edge case: Top-N larger than actual matches should not force stop",
+  "input": {
+    "htmlFile": "test/cases/case09_limit_gt_matches.html",
+    "selector": ".entry",
+    "algorithm": "DFS",
+    "limit": 10
+  },
+  "expected": {
+    "matchCount": 2,
+    "visitedCount": 5,
+    "maxDepthVisited": 4,
+    "stoppedByLimit": false,
+    "matches": [
+      {
+        "nodePath": "0/0/0/0",
+        "tag": "li",
+        "depth": 3,
+        "visitStep": 4,
+        "attributes": {
+          "class": "entry"
+        },
+        "textSnippet": "One"
+      },
+      {
+        "nodePath": "0/0/0/0/0",
+        "tag": "li",
+        "depth": 4,
+        "visitStep": 5,
+        "attributes": {
+          "class": "entry"
+        },
+        "textSnippet": "Two"
+      }
+    ]
+  }
+}

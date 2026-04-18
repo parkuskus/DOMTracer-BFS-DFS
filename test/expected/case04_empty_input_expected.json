@@ -1,0 +1,13 @@
+{
+  "description": "Edge case: empty HTML should fail fast in parser",
+  "input": {
+    "htmlFile": "test/cases/case04_empty_input.html",
+    "selector": "*",
+    "algorithm": "BFS",
+    "limit": 0
+  },
+  "expected": {
+    "shouldError": true,
+    "errorContains": "empty document"
+  }
+}

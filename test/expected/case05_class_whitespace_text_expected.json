@@ -1,0 +1,29 @@
+{
+  "description": "Edge case: class parsing with extra spaces and text normalization",
+  "input": {
+    "htmlFile": "test/cases/case05_class_whitespace_text.html",
+    "selector": ".featured",
+    "algorithm": "BFS",
+    "limit": 0,
+    "includePathToMatch": true
+  },
+  "expected": {
+    "matchCount": 1,
+    "visitedCount": 3,
+    "maxDepthVisited": 2,
+    "stoppedByLimit": false,
+    "matches": [
+      {
+        "nodePath": "0/0/0",
+        "tag": "article",
+        "depth": 2,
+        "visitStep": 3,
+        "attributes": {
+          "class": "item    featured"
+        },
+        "textSnippet": "Hello world",
+        "pathFromRoot": ["html", "body", "article"]
+      }
+    ]
+  }
+}

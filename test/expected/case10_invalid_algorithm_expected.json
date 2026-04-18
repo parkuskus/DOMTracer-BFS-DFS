@@ -1,0 +1,13 @@
+{
+  "description": "Edge case: invalid algorithm input should return error",
+  "input": {
+    "htmlFile": "test/cases/case10_invalid_algorithm.html",
+    "selector": "article",
+    "algorithm": "RANDOM",
+    "limit": 0
+  },
+  "expected": {
+    "shouldError": true,
+    "errorContains": "unsupported algorithm"
+  }
+}

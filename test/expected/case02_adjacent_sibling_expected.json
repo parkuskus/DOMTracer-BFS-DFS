@@ -1,0 +1,30 @@
+{
+  "description": "Adjacent sibling combinator img + p with BFS",
+  "input": {
+    "htmlFile": "test/cases/case02_adjacent_sibling.html",
+    "selector": "img + p",
+    "algorithm": "BFS",
+    "limit": 0,
+    "includePathToMatch": true,
+    "includeTraversalLog": false
+  },
+  "expected": {
+    "matchCount": 1,
+    "visitedCount": 5,
+    "maxDepthVisited": 3,
+    "stoppedByLimit": false,
+    "matches": [
+      {
+        "nodePath": "0/0/0/1",
+        "tag": "p",
+        "depth": 3,
+        "visitStep": 5,
+        "attributes": {
+          "id": "lead"
+        },
+        "textSnippet": "Intro",
+        "pathFromRoot": ["html", "body", "div", "p"]
+      }
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "description": "Edge case: selector list (comma) is currently unsupported and should return no matches",
+  "input": {
+    "htmlFile": "test/cases/case07_selector_list_unsupported.html",
+    "selector": "div, p",
+    "algorithm": "BFS",
+    "limit": 0
+  },
+  "expected": {
+    "matchCount": 0,
+    "visitedCount": 4,
+    "maxDepthVisited": 3,
+    "stoppedByLimit": false
+  }
+}

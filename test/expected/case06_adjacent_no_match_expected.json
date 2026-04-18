@@ -1,0 +1,15 @@
+{
+  "description": "Edge case: adjacent sibling should not match when order is reversed",
+  "input": {
+    "htmlFile": "test/cases/case06_adjacent_no_match.html",
+    "selector": "img + p",
+    "algorithm": "BFS",
+    "limit": 0
+  },
+  "expected": {
+    "matchCount": 0,
+    "visitedCount": 5,
+    "maxDepthVisited": 3,
+    "stoppedByLimit": false
+  }
+}

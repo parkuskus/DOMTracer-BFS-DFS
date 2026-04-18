@@ -1,0 +1,16 @@
+{
+  "description": "Edge case: malformed HTML (unclosed tags) should still produce DOM and traversal result",
+  "input": {
+    "htmlFile": "test/cases/case08_malformed_unclosed.html",
+    "selector": "*",
+    "algorithm": "DFS",
+    "limit": 0
+  },
+  "expected": {
+    "matchCount": 4,
+    "visitedCount": 4,
+    "maxDepthVisited": 3,
+    "stoppedByLimit": false,
+    "notes": "Current parser tolerates EOF and returns built tree if at least one root child exists"
+  }
+}
