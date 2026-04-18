@@ -69,7 +69,7 @@ func main() {
 
 func buildDOMFromInput(reader *bufio.Reader) (root *parser.Node, source string, fetchMs int64, parseMs int64, err error) {
 	mode := promptChoice(reader,
-		"Pilih sumber input HTML", []string{"1) URL website", "2) HTML manual"}, "1")
+		"Pilih sumber input HTML", []string{"1) URL website", "2) HTML manual", "3) File HTML"}, "1")
 
 	switch mode {
 	case "1":
@@ -98,6 +98,21 @@ func buildDOMFromInput(reader *bufio.Reader) (root *parser.Node, source string, 
 			return nil, "", 0, parseMs, fmt.Errorf("parse gagal: %w", err)
 		}
 		return root, "HTML manual", 0, parseMs, nil
+	case "3":
+		htmlPath := promptRequired(reader, "Masukkan path file HTML", "../test/cases/case01_basic_article.html")
+
+		raw, readErr := os.ReadFile(htmlPath)
+		if readErr != nil {
+			return nil, "", 0, 0, fmt.Errorf("gagal membaca file %q: %w", htmlPath, readErr)
+		}
+
+		parseStart := time.Now()
+		root, err = parser.ParseHTML(string(raw))
+		parseMs = time.Since(parseStart).Milliseconds()
+		if err != nil {
+			return nil, "", 0, parseMs, fmt.Errorf("parse gagal: %w", err)
+		}
+		return root, "File: " + htmlPath, 0, parseMs, nil
 	default:
 		return nil, "", 0, 0, fmt.Errorf("mode input tidak valid")
 	}
@@ -146,12 +161,17 @@ func promptChoice(reader *bufio.Reader, title string, options []string, defaultV
 	for _, option := range options {
 		fmt.Println(option)
 	}
+	allowed := make(map[string]bool, len(options))
+	for i := range options {
+		allowed[strconv.Itoa(i+1)] = true
+	}
+
 	for {
 		value := strings.TrimSpace(readLine(reader, "Pilihan", defaultValue))
 		if value == "" {
 			value = defaultValue
 		}
-		if value == "1" || value == "2" {
+		if allowed[value] {
 			return value
 		}
 		fmt.Println("Pilihan tidak valid.")
