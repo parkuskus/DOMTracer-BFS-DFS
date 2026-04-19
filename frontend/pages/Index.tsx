@@ -50,20 +50,11 @@ const Index = () => {
               <span className="text-[11px] text-muted-foreground font-medium">BFS & DFS</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="chip">
-              <Sparkles className="w-3 h-3" /> Live
-            </span>
-          </div>
         </div>
       </header>
 
       {/* Hero */}
       <section className="max-w-[1400px] mx-auto px-6 pt-16 pb-10 lg:pt-24 lg:pb-14 text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/60 border border-white/60 backdrop-blur text-xs font-semibold text-primary mb-6">
-          <Sparkles className="w-3.5 h-3.5" />
-          IF2211 - Strategi Algoritma
-        </div>
         <h1 className="font-display font-extrabold text-5xl md:text-6xl lg:text-7xl leading-[1.02] tracking-tight text-balance max-w-4xl mx-auto">
           Trace any DOM, <span className="text-gradient">node by node</span>.
         </h1>
@@ -78,7 +69,6 @@ const Index = () => {
           <div className="lg:sticky lg:top-24 glass rounded-2xl p-6">
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-display font-bold text-lg">Configure</h2>
-              <span className="chip">01</span>
             </div>
             <InputForm onSubmit={handleSubmit} isLoading={isLoading} />
           </div>

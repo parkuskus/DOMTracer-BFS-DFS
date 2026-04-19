@@ -1,13 +1,13 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
-import { Globe, Code2, Search, Sparkles } from "lucide-react";
+import { Globe, Code2, Search, Sparkles, FileUp, X } from "lucide-react";
 
 export type Algorithm = "BFS" | "DFS";
 
 export interface FormState {
-  inputMode: "url" | "html";
+  inputMode: "url" | "html" | "file";
   inputValue: string;
   algorithm: Algorithm;
   cssSelector: string;
@@ -23,15 +23,45 @@ interface Props {
 const labelCls = "block text-xs font-semibold tracking-wide text-foreground/70 mb-2.5";
 
 export default function InputForm({ onSubmit, isLoading }: Props) {
-  const [inputMode, setInputMode] = useState<"url" | "html">("url");
+  const [inputMode, setInputMode] = useState<"url" | "html" | "file">("url");
   const [inputValue, setInputValue] = useState("https://example.com");
   const [algorithm, setAlgorithm] = useState<Algorithm>("BFS");
   const [cssSelector, setCssSelector] = useState("a.link-primary");
   const [limitType, setLimitType] = useState<"all" | "top-n">("all");
   const [topN, setTopN] = useState(10);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const inputCls =
     "rounded-xl bg-white/70 border-white/60 backdrop-blur h-11 text-sm placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary/50 transition-all";
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setInputValue(ev.target?.result as string ?? "");
+    };
+    reader.readAsText(file);
+  };
+
+  const clearFile = () => {
+    setFileName(null);
+    setInputValue("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleModeSwitch = (mode: "url" | "html" | "file") => {
+    setInputMode(mode);
+    // Reset input value when switching modes
+    if (mode === "url") setInputValue("https://example.com");
+    else if (mode === "html") setInputValue("");
+    else {
+      setInputValue("");
+      setFileName(null);
+    }
+  };
 
   return (
     <form
@@ -41,17 +71,19 @@ export default function InputForm({ onSubmit, isLoading }: Props) {
       }}
       className="space-y-5"
     >
+      {/* Input source toggle — now 3 columns */}
       <div>
         <label className={labelCls}>Input source</label>
-        <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-white/50 border border-white/60">
+        <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-white/50 border border-white/60">
           {([
-            { id: "url", label: "URL", Icon: Globe },
-            { id: "html", label: "HTML", Icon: Code2 },
+            { id: "url",  label: "URL",  Icon: Globe   },
+            { id: "html", label: "HTML", Icon: Code2   },
+            { id: "file", label: "File", Icon: FileUp  },
           ] as const).map(({ id, label, Icon }) => (
             <button
               key={id}
               type="button"
-              onClick={() => setInputMode(id)}
+              onClick={() => handleModeSwitch(id)}
               className={[
                 "py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-all",
                 inputMode === id
@@ -66,9 +98,13 @@ export default function InputForm({ onSubmit, isLoading }: Props) {
         </div>
       </div>
 
+      {/* Dynamic input area */}
       <div>
-        <label className={labelCls}>{inputMode === "url" ? "Website URL" : "Raw HTML"}</label>
-        {inputMode === "url" ? (
+        <label className={labelCls}>
+          {inputMode === "url" ? "Website URL" : inputMode === "html" ? "Raw HTML" : "HTML File"}
+        </label>
+
+        {inputMode === "url" && (
           <Input
             type="url"
             value={inputValue}
@@ -76,7 +112,9 @@ export default function InputForm({ onSubmit, isLoading }: Props) {
             placeholder="https://example.com"
             className={inputCls}
           />
-        ) : (
+        )}
+
+        {inputMode === "html" && (
           <Textarea
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
@@ -85,8 +123,50 @@ export default function InputForm({ onSubmit, isLoading }: Props) {
             className="rounded-xl bg-white/70 border-white/60 backdrop-blur text-sm focus-visible:ring-2 focus-visible:ring-primary/30"
           />
         )}
+
+        {inputMode === "file" && (
+          <>
+            {/* Hidden native file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".html,.htm"
+              onChange={handleFileChange}
+              className="hidden"
+              id="html-file-upload"
+            />
+
+            {fileName ? (
+              /* File selected — show pill with name + clear button */
+              <div className="flex items-center gap-2 px-4 h-11 rounded-xl bg-white/70 border border-white/60 backdrop-blur">
+                <FileUp className="w-4 h-4 text-primary shrink-0" />
+                <span className="flex-1 text-sm truncate text-foreground">{fileName}</span>
+                <button
+                  type="button"
+                  onClick={clearFile}
+                  className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                  aria-label="Clear file"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              /* Drop-zone style trigger */
+              <label
+                htmlFor="html-file-upload"
+                className="flex flex-col items-center justify-center gap-2 h-24 rounded-xl border-2 border-dashed border-white/60 bg-white/40 backdrop-blur cursor-pointer hover:bg-white/60 hover:border-primary/40 transition-all group"
+              >
+                <FileUp className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                  Click to browse <span className="font-semibold">.html</span> / <span className="font-semibold">.htm</span> files
+                </span>
+              </label>
+            )}
+          </>
+        )}
       </div>
 
+      {/* Algorithm */}
       <div>
         <label className={labelCls}>Algorithm</label>
         <div className="grid grid-cols-2 gap-2">
@@ -111,6 +191,7 @@ export default function InputForm({ onSubmit, isLoading }: Props) {
         </div>
       </div>
 
+      {/* CSS selector */}
       <div>
         <label className={labelCls}>CSS selector</label>
         <div className="relative">
@@ -124,6 +205,7 @@ export default function InputForm({ onSubmit, isLoading }: Props) {
         </div>
       </div>
 
+      {/* Result limit */}
       <div>
         <label className={labelCls}>Result limit</label>
         <div className="flex gap-2">
