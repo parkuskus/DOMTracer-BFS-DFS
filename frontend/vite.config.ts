@@ -1,16 +1,22 @@
-// =============================================================================
-// vite.config.ts — Konfigurasi Vite
-// =============================================================================
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import react from "@vitejs/plugin-react-swc";
+import path from "path";
+import { componentTagger } from "lovable-tagger";
 
-export default defineConfig({
-  plugins: [react()],
+// https://vitejs.dev/config/
+export default defineConfig(({ mode }) => ({
   server: {
-    port: 5173,
-    // Proxy ke backend jika dijalankan lokal (opsional)
-    // proxy: {
-    //   "/api": "http://localhost:8000",
-    // },
+    host: "::",
+    port: 8080,
+    hmr: {
+      overlay: false,
+    },
   },
-});
+  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+    dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
+  },
+}));

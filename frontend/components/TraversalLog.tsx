@@ -1,107 +1,78 @@
-// =============================================================================
-// TraversalLog.tsx — Tampilan log traversal step-by-step
-// =============================================================================
-
 import { useState } from "react";
-import type { TraversalLogEntry } from "../src/types";
+import type { TraversalLogEntry } from "./lib/mockData";
+import { Check, Filter } from "lucide-react";
 
-interface TraversalLogProps {
+interface Props {
   logs: TraversalLogEntry[];
   algorithm: "BFS" | "DFS";
 }
 
-export default function TraversalLog({ logs, algorithm }: TraversalLogProps) {
+export default function TraversalLog({ logs, algorithm }: Props) {
   const [showOnlyMatches, setShowOnlyMatches] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
-  const filteredLogs = showOnlyMatches
-    ? logs.filter((l) => l.isMatch)
-    : logs;
-
+  const filtered = showOnlyMatches ? logs.filter((l) => l.isMatch) : logs;
   const matchCount = logs.filter((l) => l.isMatch).length;
 
   return (
-    <div className="border border-slate-200 rounded-xl overflow-hidden">
-      {/* Header bar */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-200">
-        <div className="flex items-center gap-3">
+    <div className="glass rounded-2xl overflow-hidden">
+      <header className="flex items-center justify-between px-5 py-3.5 border-b border-white/50 bg-white/40">
+        <div className="flex items-center gap-2">
           <div className="flex gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-400" />
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+            <span className="w-2.5 h-2.5 rounded-full bg-red-300" />
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-300" />
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-300" />
           </div>
-          <span className="text-[11px] font-mono text-slate-400 tracking-wider">
-            traversal.log — {algorithm} — {logs.length} steps
+          <span className="ml-2 text-sm font-semibold text-foreground/80">
+            traversal · {algorithm} · {logs.length} steps
           </span>
         </div>
+        <button
+          onClick={() => setShowOnlyMatches((v) => !v)}
+          className={[
+            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all",
+            showOnlyMatches
+              ? "bg-gradient-primary text-primary-foreground shadow-soft"
+              : "bg-white/70 text-foreground/70 hover:bg-white border border-white/60",
+          ].join(" ")}
+        >
+          <Filter className="w-3 h-3" />
+          {matchCount} matches
+        </button>
+      </header>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowOnlyMatches((v) => !v)}
-            className={[
-              "px-2.5 py-1 text-[10px] font-semibold rounded-md tracking-wide transition-all",
-              showOnlyMatches
-                ? "bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200"
-                : "bg-slate-100 text-slate-400 hover:text-slate-600",
-            ].join(" ")}
-          >
-            ✦ {matchCount} MATCHES
-          </button>
-
-          <button
-            onClick={() => setIsCollapsed((v) => !v)}
-            className="px-2 py-1 text-[10px] font-mono text-slate-400 hover:text-slate-600 transition-colors"
-          >
-            {isCollapsed ? "▾ EXPAND" : "▴ COLLAPSE"}
-          </button>
-        </div>
-      </div>
-
-      {/* Log entries */}
-      {!isCollapsed && (
-        <div className="bg-white max-h-72 overflow-y-auto font-mono text-xs">
-          {filteredLogs.length === 0 ? (
-            <div className="px-4 py-6 text-center text-slate-400">
-              {showOnlyMatches ? "No matches found." : "No log entries."}
-            </div>
-          ) : (
-            filteredLogs.map((entry) => (
-              <div
-                key={entry.step}
+      <div className="max-h-80 overflow-y-auto">
+        {filtered.length === 0 ? (
+          <div className="px-4 py-12 text-center text-muted-foreground text-sm">No entries.</div>
+        ) : (
+          <ul className="divide-y divide-white/40">
+            {filtered.map((l, i) => (
+              <li
+                key={l.step}
                 className={[
-                  "flex items-start gap-3 px-4 py-1.5 border-b border-slate-100",
-                  "hover:bg-slate-50 transition-colors duration-100",
-                  entry.isMatch ? "bg-emerald-50/50" : "",
+                  "px-5 py-2.5 flex items-center gap-3 text-sm transition-colors hover:bg-white/40 animate-fade-up",
+                  l.isMatch ? "bg-primary-soft/40" : "",
                 ].join(" ")}
+                style={{ animationDelay: `${i * 20}ms` }}
               >
-                <span className="text-slate-300 w-7 text-right flex-shrink-0 pt-px">
-                  {entry.step.toString().padStart(3, "0")}
+                <span className="w-10 text-xs font-semibold text-muted-foreground tabular-nums">
+                  #{String(l.step).padStart(2, "0")}
                 </span>
-
-                <span
-                  className={[
-                    "flex-shrink-0 w-16 text-center px-1 py-0.5 rounded text-[10px] font-bold",
-                    entry.isMatch
-                      ? "bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200"
-                      : "bg-slate-50 text-slate-400",
-                  ].join(" ")}
-                >
-                  &lt;{entry.nodeTag}&gt;
+                <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-white/70 border border-white/60 text-foreground/70">
+                  d{l.depth}
                 </span>
-
-                <span
-                  className={entry.isMatch ? "text-emerald-700" : "text-slate-500"}
-                >
-                  {entry.isMatch && (
-                    <span className="text-emerald-500 mr-1.5">✦</span>
-                  )}
-                  {entry.message}
+                <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-primary-soft text-primary">
+                  &lt;{l.tag}&gt;
                 </span>
-              </div>
-            ))
-          )}
-        </div>
-      )}
+                <span className="flex-1 text-foreground/80 truncate">{l.note}</span>
+                {l.isMatch && (
+                  <span className="inline-flex items-center gap-1 text-success text-xs font-bold">
+                    <Check className="w-3.5 h-3.5" /> match
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

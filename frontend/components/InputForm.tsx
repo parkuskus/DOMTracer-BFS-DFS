@@ -1,199 +1,185 @@
-// =============================================================================
-// InputForm.tsx — Form input untuk URL/HTML, algoritma, selector, dan limit
-// =============================================================================
-
 import { useState } from "react";
-import type { FormState, ResultLimit } from "../src/types";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Textarea } from "./ui/textarea";
+import { Globe, Code2, Search, Sparkles } from "lucide-react";
 
-interface InputFormProps {
+export type Algorithm = "BFS" | "DFS";
+
+export interface FormState {
+  inputMode: "url" | "html";
+  inputValue: string;
+  algorithm: Algorithm;
+  cssSelector: string;
+  limitType: "all" | "top-n";
+  topN: number;
+}
+
+interface Props {
   onSubmit: (form: FormState) => void;
   isLoading: boolean;
 }
 
-export default function InputForm({ onSubmit, isLoading }: InputFormProps) {
+const labelCls = "block text-xs font-semibold tracking-wide text-foreground/70 mb-2.5";
+
+export default function InputForm({ onSubmit, isLoading }: Props) {
   const [inputMode, setInputMode] = useState<"url" | "html">("url");
-  const [inputValue, setInputValue] = useState("");
-  const [algorithm, setAlgorithm] = useState<"BFS" | "DFS">("BFS");
-  const [cssSelector, setCssSelector] = useState("");
+  const [inputValue, setInputValue] = useState("https://example.com");
+  const [algorithm, setAlgorithm] = useState<Algorithm>("BFS");
+  const [cssSelector, setCssSelector] = useState("a.link-primary");
   const [limitType, setLimitType] = useState<"all" | "top-n">("all");
   const [topN, setTopN] = useState(10);
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const resultLimit: ResultLimit =
-      limitType === "all" ? { type: "all" } : { type: "top-n", n: topN };
-    onSubmit({ inputValue, inputMode, algorithm, cssSelector, resultLimit });
-  }
-
-  const inputClass =
-    "w-full bg-white border border-slate-200 rounded-lg px-4 py-3 text-sm " +
-    "text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-400 " +
-    "focus:ring-2 focus:ring-blue-100 transition-all duration-200";
-
-  const labelClass = "block text-[11px] font-semibold text-slate-400 tracking-widest uppercase mb-3";
+  const inputCls =
+    "rounded-xl bg-white/70 border-white/60 backdrop-blur h-11 text-sm placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary/50 transition-all";
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Mode Toggle */}
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit({ inputMode, inputValue, algorithm, cssSelector, limitType, topN });
+      }}
+      className="space-y-5"
+    >
       <div>
-        <label className={labelClass}>Input Mode</label>
-        <div className="flex rounded-lg overflow-hidden border border-slate-200">
-          {(["url", "html"] as const).map((mode) => (
+        <label className={labelCls}>Input source</label>
+        <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-white/50 border border-white/60">
+          {([
+            { id: "url", label: "URL", Icon: Globe },
+            { id: "html", label: "HTML", Icon: Code2 },
+          ] as const).map(({ id, label, Icon }) => (
             <button
-              key={mode}
+              key={id}
               type="button"
-              onClick={() => setInputMode(mode)}
+              onClick={() => setInputMode(id)}
               className={[
-                "flex-1 py-3.5 text-xs font-semibold tracking-wide transition-all duration-200",
-                inputMode === mode
-                  ? "bg-blue-50 text-blue-600 border-b-2 border-blue-500"
-                  : "bg-white text-slate-400 hover:text-slate-600 hover:bg-slate-50",
+                "py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-all",
+                inputMode === id
+                  ? "bg-gradient-primary text-primary-foreground shadow-soft"
+                  : "text-foreground/60 hover:text-foreground hover:bg-white/60",
               ].join(" ")}
             >
-              {mode === "url" ? "🌐 URL" : "</> HTML"}
+              <Icon className="w-4 h-4" />
+              {label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Input */}
       <div>
-        <label className={labelClass}>
-          {inputMode === "url" ? "Website URL" : "Raw HTML"}
-        </label>
+        <label className={labelCls}>{inputMode === "url" ? "Website URL" : "Raw HTML"}</label>
         {inputMode === "url" ? (
-          <input
+          <Input
             type="url"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="https://example.com"
-            required
-            className={inputClass}
+            className={inputCls}
           />
         ) : (
-          <textarea
+          <Textarea
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder={'<html>\n  <body>\n    <div class="container">…</div>\n  </body>\n</html>'}
-            required
-            rows={6}
-            className={inputClass + " resize-y leading-relaxed font-mono text-xs"}
+            placeholder="<html>…</html>"
+            rows={5}
+            className="rounded-xl bg-white/70 border-white/60 backdrop-blur text-sm focus-visible:ring-2 focus-visible:ring-primary/30"
           />
         )}
       </div>
 
-      {/* Algorithm */}
       <div>
-        <label className={labelClass}>Traversal Algorithm</label>
-        <div className="grid grid-cols-2 gap-3">
-          {(["BFS", "DFS"] as const).map((algo) => (
+        <label className={labelCls}>Algorithm</label>
+        <div className="grid grid-cols-2 gap-2">
+          {(["BFS", "DFS"] as const).map((a) => (
             <button
-              key={algo}
+              key={a}
               type="button"
-              onClick={() => setAlgorithm(algo)}
+              onClick={() => setAlgorithm(a)}
               className={[
-                "relative py-4 px-4 rounded-lg border text-sm font-bold tracking-wide transition-all duration-200",
-                algorithm === algo
-                  ? algo === "BFS"
-                    ? "border-violet-300 bg-violet-50 text-violet-700 shadow-sm"
-                    : "border-violet-300 bg-violet-50 text-violet-700 shadow-sm"
-                  : "border-slate-200 bg-white text-slate-400 hover:border-slate-300 hover:text-slate-600",
+                "py-3 rounded-xl text-left px-4 transition-all border",
+                algorithm === a
+                  ? "bg-gradient-primary text-primary-foreground border-transparent shadow-soft"
+                  : "bg-white/60 border-white/60 hover:bg-white/80 text-foreground",
               ].join(" ")}
             >
-              <div className="font-mono">{algo}</div>
-              <div className="text-[9px] font-normal opacity-60 mt-0.5">
-                {algo === "BFS" ? "Breadth-First" : "Depth-First"}
+              <div className="font-display font-bold text-base">{a}</div>
+              <div className={["text-[11px] mt-0.5", algorithm === a ? "text-white/85" : "text-muted-foreground"].join(" ")}>
+                {a === "BFS" ? "Breadth First" : "Depth First"}
               </div>
             </button>
           ))}
         </div>
       </div>
 
-      {/* CSS Selector */}
       <div>
-        <label className={labelClass}>CSS Selector</label>
-        <input
-          type="text"
-          value={cssSelector}
-          onChange={(e) => setCssSelector(e.target.value)}
-          placeholder=".class-name, #id, div > p, [attr]"
-          required
-          className={inputClass + " font-mono"}
-        />
-        <div className="flex flex-wrap gap-2 mt-6">
-          {["div", "p", "a", "h1", ".container", "#main", "img"].map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setCssSelector(s)}
-              className="px-2.5 py-1.5 text-[10px] font-mono bg-slate-50 text-slate-400 
-                         hover:text-blue-600 hover:bg-blue-50 rounded-md border border-slate-200 
-                         hover:border-blue-200 transition-all duration-150"
-            >
-              {s}
-            </button>
-          ))}
+        <label className={labelCls}>CSS selector</label>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={cssSelector}
+            onChange={(e) => setCssSelector(e.target.value)}
+            placeholder="div.card > a"
+            className={inputCls + " pl-9"}
+          />
         </div>
       </div>
 
-      {/* Result Limit */}
       <div>
-        <label className={labelClass}>Result Limit</label>
-        <div className="flex rounded-lg overflow-hidden border border-slate-200 mb-4">
-          {(["all", "top-n"] as const).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setLimitType(t)}
-              className={[
-                "flex-1 py-2.5 text-xs font-semibold tracking-wide transition-all duration-200",
-                limitType === t
-                  ? "bg-blue-50 text-blue-600"
-                  : "bg-white text-slate-400 hover:text-slate-600",
-                "border-r border-slate-200 last:border-r-0",
-              ].join(" ")}
-            >
-              {t === "all" ? "All Results" : "Top N"}
-            </button>
-          ))}
-        </div>
-
-        {limitType === "top-n" && (
-          <div className="flex items-center gap-3">
-            <input
+        <label className={labelCls}>Result limit</label>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setLimitType("all")}
+            className={[
+              "flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all border",
+              limitType === "all"
+                ? "bg-primary text-primary-foreground border-transparent"
+                : "bg-white/60 border-white/60 hover:bg-white/80",
+            ].join(" ")}
+          >
+            All
+          </button>
+          <button
+            type="button"
+            onClick={() => setLimitType("top-n")}
+            className={[
+              "flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all border",
+              limitType === "top-n"
+                ? "bg-primary text-primary-foreground border-transparent"
+                : "bg-white/60 border-white/60 hover:bg-white/80",
+            ].join(" ")}
+          >
+            Top N
+          </button>
+          {limitType === "top-n" && (
+            <Input
               type="number"
               min={1}
-              max={1000}
               value={topN}
-              onChange={(e) => setTopN(parseInt(e.target.value) || 1)}
-              className={inputClass + " w-28 font-mono"}
+              onChange={(e) => setTopN(parseInt(e.target.value || "1", 10))}
+              className={inputCls + " w-20 text-center"}
             />
-            <span className="text-xs text-slate-400">kemunculan pertama</span>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Submit */}
-      <button
+      <Button
         type="submit"
         disabled={isLoading}
-        className={[
-          "w-full py-3 px-2 rounded-lg font-semibold text-sm tracking-wide",
-          "border transition-all duration-300",
-          isLoading
-            ? "border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed"
-            : "border-blue-500 bg-blue-600 text-white hover:bg-blue-700 shadow-sm shadow-blue-200",
-        ].join(" ")}
+        className="w-full h-12 rounded-xl bg-gradient-primary hover:shadow-glow text-primary-foreground font-display font-semibold text-sm transition-all"
       >
         {isLoading ? (
-          <span className="flex items-center justify-center gap-2">
-            <span className="inline-block w-3.5 h-3.5 border-2 border-slate-300 border-t-blue-500 rounded-full animate-spin" />
-            Traversing...
+          <span className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-white animate-pulse-soft" />
+            Tracing…
           </span>
         ) : (
-          "Run Traversal"
+          <span className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4" />
+            Run Traversal
+          </span>
         )}
-      </button>
+      </Button>
     </form>
   );
 }

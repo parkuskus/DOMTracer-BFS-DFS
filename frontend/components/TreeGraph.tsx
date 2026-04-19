@@ -1,290 +1,129 @@
 import { useMemo, useState } from "react";
-import type { TreeNodeData } from "../src/types";
+import type { TreeNodeData } from "./lib/mockData";
 
-interface TreeGraphProps {
-  root: TreeNodeData;
-}
+interface Props { root: TreeNodeData; }
+interface PN { node: TreeNodeData; x: number; y: number; children: PN[]; }
 
-interface PositionedNode {
-  node: TreeNodeData;
-  x: number;
-  y: number;
-  children: PositionedNode[];
-}
-
-const NODE_W = 90;
-const NODE_H = 34;
+const NODE_W = 96;
+const NODE_H = 36;
 const H_GAP = 18;
-const V_GAP = 60;
+const V_GAP = 76;
 
-// Hitung lebar subtree berdasarkan jumlah leaf
-function computeLeafCount(n: TreeNodeData): number {
-  if (!n.children || n.children.length === 0) return 1;
-  return n.children.reduce((sum, c) => sum + computeLeafCount(c), 0);
+function leafCount(n: TreeNodeData): number {
+  if (!n.children?.length) return 1;
+  return n.children.reduce((s, c) => s + leafCount(c), 0);
 }
 
-// Layout rekursif: setiap node ditempatkan di tengah anak-anaknya
-function layout(
-  node: TreeNodeData,
-  depth: number,
-  xOffset: number
-): { positioned: PositionedNode; width: number } {
-  const leafCount = computeLeafCount(node);
-  const width = leafCount * (NODE_W + H_GAP);
-
-  if (!node.children || node.children.length === 0) {
-    return {
-      positioned: {
-        node,
-        x: xOffset + width / 2,
-        y: depth * V_GAP + NODE_H,
-        children: [],
-      },
-      width,
-    };
+function layout(n: TreeNodeData, depth: number, xOff: number): { p: PN; w: number } {
+  const w = leafCount(n) * (NODE_W + H_GAP);
+  if (!n.children?.length) {
+    return { p: { node: n, x: xOff + w / 2, y: depth * V_GAP + NODE_H, children: [] }, w };
   }
-
-  let cursor = xOffset;
-  const childPositions: PositionedNode[] = [];
-  for (const child of node.children) {
-    const { positioned, width: cw } = layout(child, depth + 1, cursor);
-    childPositions.push(positioned);
-    cursor += cw;
+  let cur = xOff;
+  const cps: PN[] = [];
+  for (const c of n.children) {
+    const r = layout(c, depth + 1, cur);
+    cps.push(r.p);
+    cur += r.w;
   }
-
-  const firstX = childPositions[0].x;
-  const lastX = childPositions[childPositions.length - 1].x;
-  const centerX = (firstX + lastX) / 2;
-
-  return {
-    positioned: {
-      node,
-      x: centerX,
-      y: depth * V_GAP + NODE_H,
-      children: childPositions,
-    },
-    width,
-  };
+  const cx = (cps[0].x + cps[cps.length - 1].x) / 2;
+  return { p: { node: n, x: cx, y: depth * V_GAP + NODE_H, children: cps }, w };
 }
 
-// Flatten untuk render
-function flatten(p: PositionedNode, list: PositionedNode[] = []): PositionedNode[] {
-  list.push(p);
-  p.children.forEach((c) => flatten(c, list));
-  return list;
+function flatten(p: PN, out: PN[] = []): PN[] {
+  out.push(p);
+  p.children.forEach((c) => flatten(c, out));
+  return out;
+}
+function edges(p: PN, out: [PN, PN][] = []): [PN, PN][] {
+  for (const c of p.children) { out.push([p, c]); edges(c, out); }
+  return out;
 }
 
-function getEdges(p: PositionedNode, edges: [PositionedNode, PositionedNode][] = []) {
-  for (const c of p.children) {
-    edges.push([p, c]);
-    getEdges(c, edges);
-  }
-  return edges;
-}
+export default function TreeGraph({ root }: Props) {
+  const [hover, setHover] = useState<string | null>(null);
 
-export default function TreeGraph({ root }: TreeGraphProps) {
-  const [hoverId, setHoverId] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(1);
-
-  const { tree, allNodes, edges, totalWidth, totalHeight } = useMemo(() => {
-    const { positioned, width } = layout(root, 0, 0);
-    const nodes = flatten(positioned);
-    const eds = getEdges(positioned);
-    const maxY = Math.max(...nodes.map((n) => n.y)) + NODE_H * 2;
-    return {
-      tree: positioned,
-      allNodes: nodes,
-      edges: eds,
-      totalWidth: Math.max(width, 600),
-      totalHeight: maxY + 40,
-    };
+  const { nodes, eds, w, h } = useMemo(() => {
+    const { p, w } = layout(root, 0, 0);
+    const ns = flatten(p);
+    const es = edges(p);
+    const maxY = Math.max(...ns.map((n) => n.y)) + NODE_H * 2;
+    return { nodes: ns, eds: es, w: Math.max(w, 600), h: maxY };
   }, [root]);
 
   return (
-    <div className="relative">
-      {/* Zoom controls */}
-      <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-white/70 backdrop-blur-md border border-white/60 rounded-lg shadow-sm p-1">
-        <button
-          onClick={() => setZoom((z) => Math.max(0.4, z - 0.1))}
-          className="w-7 h-7 rounded-md text-slate-500 hover:bg-slate-100 transition-colors text-sm font-bold"
-        >
-          −
-        </button>
-        <span className="text-[10px] font-mono text-slate-500 w-10 text-center">
-          {(zoom * 100).toFixed(0)}%
-        </span>
-        <button
-          onClick={() => setZoom((z) => Math.min(2, z + 0.1))}
-          className="w-7 h-7 rounded-md text-slate-500 hover:bg-slate-100 transition-colors text-sm font-bold"
-        >
-          +
-        </button>
-        <button
-          onClick={() => setZoom(1)}
-          className="w-7 h-7 rounded-md text-slate-500 hover:bg-slate-100 transition-colors text-[10px]"
-        >
-          ⤢
-        </button>
-      </div>
-
-      {/* Canvas */}
-      <div
-        className="overflow-auto rounded-xl border border-white/40 bg-gradient-to-br from-slate-50 via-white to-blue-50/40 relative"
-        style={{
-          maxHeight: 580,
-          backgroundImage:
-            "radial-gradient(circle, rgba(148,163,184,0.18) 1px, transparent 1px)",
-          backgroundSize: "20px 20px",
-        }}
-      >
-        <svg
-          width={totalWidth * zoom}
-          height={totalHeight * zoom}
-          viewBox={`0 0 ${totalWidth} ${totalHeight}`}
-          className="block"
-        >
+    <div className="glass rounded-2xl overflow-hidden">
+      <header className="flex items-center justify-between px-5 py-3.5 border-b border-white/50 bg-white/40">
+        <span className="text-sm font-semibold text-foreground/80">Tree graph</span>
+        <span className="text-xs text-muted-foreground font-medium">{nodes.length} nodes</span>
+      </header>
+      <div className="overflow-auto p-6" style={{ maxHeight: 520 }}>
+        <svg width={w} height={h} className="block">
           <defs>
-            <linearGradient id="edge-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#93c5fd" stopOpacity="0.9" />
-              <stop offset="100%" stopColor="#cbd5e1" stopOpacity="0.5" />
+            <linearGradient id="edge" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.3" />
+              <stop offset="100%" stopColor="hsl(var(--primary-glow))" stopOpacity="0.5" />
             </linearGradient>
-            <linearGradient id="node-matched" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#10b981" />
-              <stop offset="100%" stopColor="#059669" />
+            <linearGradient id="edgeMatch" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="hsl(var(--primary-glow))" stopOpacity="1" />
             </linearGradient>
-            <linearGradient id="node-traversed" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#a78bfa" />
-              <stop offset="100%" stopColor="#7c3aed" />
-            </linearGradient>
-            <linearGradient id="node-idle" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#ffffff" />
-              <stop offset="100%" stopColor="#f1f5f9" />
+            <linearGradient id="nodeMatch" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="hsl(var(--primary))" />
+              <stop offset="100%" stopColor="hsl(var(--primary-glow))" />
             </linearGradient>
             <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="3" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
+              <feGaussianBlur stdDeviation="3" result="b" />
+              <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
             </filter>
           </defs>
 
-          {/* Edges (Bezier) */}
-          <g>
-            {edges.map(([from, to], i) => {
-              const x1 = from.x;
-              const y1 = from.y + NODE_H / 2;
-              const x2 = to.x;
-              const y2 = to.y - NODE_H / 2;
-              const midY = (y1 + y2) / 2;
-              const path = `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
-              const isActive = to.node.isTraversed;
-              return (
-                <path
-                  key={i}
-                  d={path}
-                  stroke={isActive ? "url(#edge-grad)" : "#e2e8f0"}
-                  strokeWidth={isActive ? 1.6 : 1}
-                  fill="none"
-                  strokeLinecap="round"
-                  className="transition-all"
+          {eds.map(([a, b], i) => (
+            <path
+              key={i}
+              d={`M ${a.x} ${a.y + NODE_H / 2} C ${a.x} ${(a.y + b.y) / 2}, ${b.x} ${(a.y + b.y) / 2}, ${b.x} ${b.y - NODE_H / 2}`}
+              stroke={b.node.isMatched ? "url(#edgeMatch)" : "url(#edge)"}
+              strokeWidth={b.node.isMatched ? 2 : 1.5}
+              fill="none"
+            />
+          ))}
+
+          {nodes.map((p) => {
+            const isHover = hover === p.node.id;
+            const isMatch = p.node.isMatched;
+            return (
+              <g
+                key={p.node.id}
+                transform={`translate(${p.x - NODE_W / 2}, ${p.y - NODE_H / 2})`}
+                onMouseEnter={() => setHover(p.node.id)}
+                onMouseLeave={() => setHover(null)}
+                className="cursor-pointer"
+                filter={isMatch ? "url(#glow)" : undefined}
+              >
+                <rect
+                  width={NODE_W}
+                  height={NODE_H}
+                  rx={10}
+                  fill={isMatch ? "url(#nodeMatch)" : "hsl(0 0% 100% / 0.85)"}
+                  stroke={isMatch ? "transparent" : isHover ? "hsl(var(--primary))" : "hsl(var(--primary) / 0.25)"}
+                  strokeWidth={1.5}
                 />
-              );
-            })}
-          </g>
-
-          {/* Nodes */}
-          <g>
-            {allNodes.map((p) => {
-              const { node } = p;
-              const fill = node.isMatched
-                ? "url(#node-matched)"
-                : node.isTraversed
-                ? "url(#node-traversed)"
-                : "url(#node-idle)";
-              const stroke = node.isMatched
-                ? "#059669"
-                : node.isTraversed
-                ? "#7c3aed"
-                : "#cbd5e1";
-              const textColor =
-                node.isMatched || node.isTraversed ? "#ffffff" : "#64748b";
-              const isHover = hoverId === node.nodeId;
-
-              return (
-                <g
-                  key={node.nodeId}
-                  transform={`translate(${p.x - NODE_W / 2}, ${p.y - NODE_H / 2})`}
-                  onMouseEnter={() => setHoverId(node.nodeId)}
-                  onMouseLeave={() => setHoverId(null)}
-                  className="cursor-pointer"
-                  style={{ filter: node.isMatched ? "url(#glow)" : undefined }}
+                <text
+                  x={NODE_W / 2}
+                  y={NODE_H / 2 + 4}
+                  textAnchor="middle"
+                  fontSize="12"
+                  fontWeight={isMatch ? 700 : 600}
+                  fontFamily="Sora, system-ui, sans-serif"
+                  fill={isMatch ? "white" : "hsl(var(--foreground))"}
                 >
-                  <rect
-                    width={NODE_W}
-                    height={NODE_H}
-                    rx={10}
-                    fill={fill}
-                    stroke={stroke}
-                    strokeWidth={isHover ? 2 : 1.2}
-                    opacity={node.isTraversed || node.isMatched ? 1 : 0.55}
-                    className="transition-all duration-200"
-                  />
-                  {node.isMatched && (
-                    <circle
-                      cx={NODE_W - 8}
-                      cy={8}
-                      r={4}
-                      fill="#fff"
-                      stroke="#059669"
-                      strokeWidth={1.2}
-                    />
-                  )}
-                  <text
-                    x={NODE_W / 2}
-                    y={NODE_H / 2 + 4}
-                    textAnchor="middle"
-                    fontFamily="JetBrains Mono, monospace"
-                    fontSize="11"
-                    fontWeight="700"
-                    fill={textColor}
-                  >
-                    &lt;{node.tag}&gt;
-                  </text>
-                </g>
-              );
-            })}
-          </g>
+                  &lt;{p.node.tag}&gt;
+                </text>
+              </g>
+            );
+          })}
         </svg>
       </div>
-
-      {/* Hover details */}
-      {hoverId && (
-        <div className="mt-3 px-4 py-2.5 rounded-xl bg-white/70 backdrop-blur-md border border-white/60 shadow-sm">
-          {(() => {
-            const found = allNodes.find((n) => n.node.nodeId === hoverId);
-            if (!found) return null;
-            const n = found.node;
-            return (
-              <div className="flex flex-wrap items-center gap-3 text-xs">
-                <span className="font-mono font-bold text-blue-600">
-                  &lt;{n.tag}&gt;
-                </span>
-                <span className="text-slate-400">depth: <span className="font-mono text-slate-600">{n.depth}</span></span>
-                <span className="text-slate-400">children: <span className="font-mono text-slate-600">{n.children?.length ?? 0}</span></span>
-                {n.isMatched && (
-                  <span className="px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold">MATCH</span>
-                )}
-                {Object.keys(n.attributes).length > 0 && (
-                  <span className="font-mono text-[11px] text-slate-500 truncate">
-                    {Object.entries(n.attributes).slice(0, 3).map(([k, v]) => `${k}="${v.slice(0, 24)}"`).join(" ")}
-                  </span>
-                )}
-              </div>
-            );
-          })()}
-        </div>
-      )}
     </div>
   );
 }

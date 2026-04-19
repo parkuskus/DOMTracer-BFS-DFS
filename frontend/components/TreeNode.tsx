@@ -1,131 +1,73 @@
-// =============================================================================
-// TreeNode.tsx — Komponen rekursif untuk visualisasi satu node pohon DOM
-// =============================================================================
-
 import { useState } from "react";
-import type { TreeNodeData } from "../src/types";
+import type { TreeNodeData } from "./lib/mockData";
+import { ChevronDown, ChevronRight, Sparkles } from "lucide-react";
 
-interface TreeNodeProps {
+interface Props {
   node: TreeNodeData;
-  childIndex?: number;
+  index?: number;
 }
 
-function formatAttributes(attributes: Record<string, string>): string {
-  return Object.entries(attributes)
+function formatAttrs(a: Record<string, string>) {
+  return Object.entries(a)
     .slice(0, 3)
-    .map(([k, v]) => `${k}="${v.length > 20 ? v.slice(0, 20) + "…" : v}"`)
+    .map(([k, v]) => `${k}="${v.length > 24 ? v.slice(0, 24) + "…" : v}"`)
     .join(" ");
 }
 
-function getDepthColor(depth: number): string {
-  const colors = [
-    "border-l-blue-400",
-    "border-l-emerald-400",
-    "border-l-amber-400",
-    "border-l-orange-400",
-    "border-l-pink-400",
-    "border-l-violet-400",
-    "border-l-cyan-400",
-  ];
-  return colors[depth % colors.length];
-}
-
-export default function TreeNode({ node, childIndex = 0 }: TreeNodeProps) {
-  const [isExpanded, setIsExpanded] = useState(node.depth < 2);
-
-  const hasChildren = node.children && node.children.length > 0;
-  const attrString = formatAttributes(node.attributes);
-  const depthColor = getDepthColor(node.depth);
-
-  const nodeBaseClass = [
-    "group relative flex flex-col",
-    "pl-4 border-l-2",
-    depthColor,
-    node.isTraversed
-      ? "border-l-opacity-100"
-      : "border-l-opacity-20 opacity-50",
-  ].join(" ");
-
-  const tagBadgeClass = [
-    "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md font-mono text-xs font-bold tracking-wider transition-all duration-200",
-    node.isMatched
-      ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-300 shadow-sm"
-      : node.isTraversed
-      ? "bg-violet-50 text-violet-600 ring-1 ring-violet-200"
-      : "bg-slate-50 text-slate-400 ring-1 ring-slate-200",
-  ].join(" ");
+export default function TreeNode({ node, index = 0 }: Props) {
+  const [open, setOpen] = useState(node.depth < 2);
+  const hasChildren = node.children?.length > 0;
+  const attrs = formatAttrs(node.attributes);
 
   return (
     <div
-      className={nodeBaseClass}
-      style={{ animationDelay: `${childIndex * 30}ms` }}
+      className="relative pl-5 border-l border-primary/15 animate-fade-up"
+      style={{ animationDelay: `${index * 25}ms` }}
     >
+      <span className="absolute left-0 top-3.5 w-4 border-t border-primary/15" />
+
       <div className="flex items-start gap-2 py-1">
         {hasChildren ? (
           <button
-            onClick={() => setIsExpanded((v) => !v)}
-            className="mt-0.5 flex-shrink-0 w-5 h-5 rounded flex items-center justify-center
-                       text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-150"
-            aria-label={isExpanded ? "Collapse" : "Expand"}
+            onClick={() => setOpen((v) => !v)}
+            className="mt-0.5 w-5 h-5 rounded-md flex items-center justify-center text-primary hover:bg-primary-soft transition-colors"
           >
-            <span className="text-[10px] leading-none font-mono">
-              {isExpanded ? "▾" : "▸"}
-            </span>
+            {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
           </button>
         ) : (
-          <span className="w-5 flex-shrink-0" />
+          <span className="mt-0.5 w-5 h-5 flex items-center justify-center text-muted-foreground">·</span>
         )}
 
-        <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-          <span className={tagBadgeClass}>
-            {node.isMatched && (
-              <span className="text-emerald-500 text-[10px]">✦</span>
-            )}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span
+            className={[
+              "px-2 py-0.5 rounded-md text-xs font-semibold border transition-all",
+              node.isMatched
+                ? "bg-gradient-primary text-primary-foreground border-transparent shadow-soft"
+                : node.isTraversed
+                ? "bg-primary-soft text-primary border-primary/20"
+                : "bg-white/60 text-muted-foreground border-white/60",
+            ].join(" ")}
+          >
             &lt;{node.tag}&gt;
           </span>
-
-          {attrString && (
-            <span className="font-mono text-[11px] text-slate-400 truncate max-w-[280px]">
-              {attrString}
-            </span>
+          {attrs && (
+            <span className="text-xs text-muted-foreground truncate max-w-md">{attrs}</span>
           )}
-
-          {node.text && node.text.trim() && (
-            <span className="font-mono text-[11px] text-slate-400 italic truncate max-w-[200px]">
-              "{node.text.trim().slice(0, 40)}
-              {node.text.trim().length > 40 ? "…" : ""}"
-            </span>
-          )}
-
-          {hasChildren && (
-            <span className="text-[10px] text-slate-400 font-mono">
-              [{node.children.length} child{node.children.length > 1 ? "ren" : ""}]
-            </span>
-          )}
-
           {node.isMatched && (
-            <span className="ml-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full tracking-widest">
-              MATCH
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
+              <Sparkles className="w-3 h-3" /> match
             </span>
           )}
         </div>
       </div>
 
-      {hasChildren && isExpanded && (
-        <div className="ml-2 mt-0.5 animate-expand">
-          {node.children.map((child, idx) => (
-            <TreeNode key={child.nodeId || idx} node={child} childIndex={idx} />
+      {open && hasChildren && (
+        <div className="ml-1">
+          {node.children.map((c, i) => (
+            <TreeNode key={c.id} node={c} index={i} />
           ))}
         </div>
-      )}
-
-      {hasChildren && !isExpanded && (
-        <button
-          onClick={() => setIsExpanded(true)}
-          className="ml-6 mb-1 text-[10px] text-slate-400 hover:text-blue-600 font-mono transition-colors"
-        >
-          · · · {node.children.length} node{node.children.length > 1 ? "s" : ""} hidden · · ·
-        </button>
       )}
     </div>
   );
