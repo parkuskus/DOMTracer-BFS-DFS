@@ -86,13 +86,12 @@ export default function TreeGraph({ root }: TreeGraphProps) {
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
 
-  const { tree, allNodes, edges, totalWidth, totalHeight } = useMemo(() => {
+  const { allNodes, edges, totalWidth, totalHeight } = useMemo(() => {
     const { positioned, width } = layout(root, 0, 0);
     const nodes = flatten(positioned);
     const eds = getEdges(positioned);
     const maxY = Math.max(...nodes.map((n) => n.y)) + NODE_H * 2;
     return {
-      tree: positioned,
       allNodes: nodes,
       edges: eds,
       totalWidth: Math.max(width, 600),

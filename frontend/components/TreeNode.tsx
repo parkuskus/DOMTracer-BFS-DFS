@@ -19,13 +19,13 @@ function formatAttributes(attributes: Record<string, string>): string {
 
 function getDepthColor(depth: number): string {
   const colors = [
-    "border-l-blue-400",
-    "border-l-emerald-400",
-    "border-l-amber-400",
-    "border-l-orange-400",
-    "border-l-pink-400",
-    "border-l-violet-400",
-    "border-l-cyan-400",
+    "border-l-primary",
+    "border-l-secondary",
+    "border-l-dfs",
+    "border-l-outline",
+    "border-l-match",
+    "border-l-bfs",
+    "border-l-outline-variant",
   ];
   return colors[depth % colors.length];
 }
@@ -49,10 +49,10 @@ export default function TreeNode({ node, childIndex = 0 }: TreeNodeProps) {
   const tagBadgeClass = [
     "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md font-mono text-xs font-bold tracking-wider transition-all duration-200",
     node.isMatched
-      ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-300 shadow-sm"
+      ? "bg-match-container text-on-match ring-1 ring-match/35 shadow-sm"
       : node.isTraversed
-      ? "bg-violet-50 text-violet-600 ring-1 ring-violet-200"
-      : "bg-slate-50 text-slate-400 ring-1 ring-slate-200",
+      ? "bg-bfs-container text-on-bfs ring-1 ring-bfs/30"
+      : "bg-surface-container-high text-on-surface-variant ring-1 ring-outline-variant/30",
   ].join(" ");
 
   return (
@@ -65,7 +65,7 @@ export default function TreeNode({ node, childIndex = 0 }: TreeNodeProps) {
           <button
             onClick={() => setIsExpanded((v) => !v)}
             className="mt-0.5 flex-shrink-0 w-5 h-5 rounded flex items-center justify-center
-                       text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-150"
+                       text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-all duration-150"
             aria-label={isExpanded ? "Collapse" : "Expand"}
           >
             <span className="text-[10px] leading-none font-mono">
@@ -79,32 +79,32 @@ export default function TreeNode({ node, childIndex = 0 }: TreeNodeProps) {
         <div className="flex flex-wrap items-center gap-1.5 min-w-0">
           <span className={tagBadgeClass}>
             {node.isMatched && (
-              <span className="text-emerald-500 text-[10px]">✦</span>
+              <span className="text-match text-[10px]">✦</span>
             )}
             &lt;{node.tag}&gt;
           </span>
 
           {attrString && (
-            <span className="font-mono text-[11px] text-slate-400 truncate max-w-[280px]">
+            <span className="font-mono text-[11px] text-on-surface-variant truncate max-w-[280px]">
               {attrString}
             </span>
           )}
 
           {node.text && node.text.trim() && (
-            <span className="font-mono text-[11px] text-slate-400 italic truncate max-w-[200px]">
+            <span className="font-mono text-[11px] text-on-surface-variant italic truncate max-w-[200px]">
               "{node.text.trim().slice(0, 40)}
               {node.text.trim().length > 40 ? "…" : ""}"
             </span>
           )}
 
           {hasChildren && (
-            <span className="text-[10px] text-slate-400 font-mono">
+            <span className="text-[10px] text-outline font-mono">
               [{node.children.length} child{node.children.length > 1 ? "ren" : ""}]
             </span>
           )}
 
           {node.isMatched && (
-            <span className="ml-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full tracking-widest">
+            <span className="ml-1 text-[10px] font-bold text-on-match bg-match-container px-1.5 py-0.5 rounded-full tracking-widest">
               MATCH
             </span>
           )}
@@ -122,7 +122,7 @@ export default function TreeNode({ node, childIndex = 0 }: TreeNodeProps) {
       {hasChildren && !isExpanded && (
         <button
           onClick={() => setIsExpanded(true)}
-          className="ml-6 mb-1 text-[10px] text-slate-400 hover:text-blue-600 font-mono transition-colors"
+          className="ml-6 mb-1 text-[10px] text-on-surface-variant hover:text-primary font-mono transition-colors"
         >
           · · · {node.children.length} node{node.children.length > 1 ? "s" : ""} hidden · · ·
         </button>

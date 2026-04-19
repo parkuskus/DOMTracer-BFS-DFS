@@ -2,7 +2,7 @@
 // api.ts — Fetch ke backend Go, payload cocok persis dengan traverseRequest
 // =============================================================================
 
-import type { ApiResponse, FormState, TraverseRequest } from "./types";
+import type { ApiResponse, FormState, TraverseRequest } from "../types";
 
 /**
  * Base URL backend Go.

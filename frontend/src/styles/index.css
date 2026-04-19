@@ -2,7 +2,7 @@
    index.css
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -10,83 +10,88 @@
 
 /* ── Design Tokens ─────────────────────────────────────────── */
 :root {
-  --font-ui: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-heading: 'Space Grotesk', system-ui, sans-serif;
+  --font-ui: 'IBM Plex Sans', 'Manrope', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
   /* Surfaces */
-  --bg-base:    #F8FAFC;
-  --bg-surface: #FFFFFF;
-  --bg-subtle:  #F1F5F9;
-  --bg-muted:   #E2E8F0;
+  --bg-base:    #fbf9f4;
+  --bg-surface: #ffffff;
+  --bg-subtle:  #f5f3ee;
+  --bg-muted:   #e4e2dd;
 
   /* Borders */
-  --border-base:   #E2E8F0;
-  --border-strong: #CBD5E1;
+  --border-base:   #d7d3ca;
+  --border-strong: #bdc9c6;
 
   /* Text */
-  --text-primary:   #0F172A;
-  --text-secondary: #475569;
-  --text-muted:     #94A3B8;
+  --text-primary:   #1b1c19;
+  --text-secondary: #3e4947;
+  --text-muted:     #6e7977;
 
-  /* Accent — single blue */
-  --accent:         #2563EB;
-  --accent-light:   #EFF6FF;
-  --accent-mid:     #BFDBFE;
+  /* Semantic accents */
+  --accent:         #005c55;
+  --accent-light:   #d7f3ee;
+  --accent-mid:     #9cf2e8;
 
   /* Semantic */
-  --match-color:    #059669;
-  --match-light:    #ECFDF5;
-  --match-mid:      #A7F3D0;
+  --match-color:    #9a6700;
+  --match-light:    #fef1c7;
+  --match-mid:      #f5d99c;
 
-  --visit-color:    #7C3AED;
-  --visit-light:    #F5F3FF;
-  --visit-mid:      #DDD6FE;
+  --visit-color:    #0f766e;
+  --visit-light:    #d7f3ee;
+  --visit-mid:      #9cf2e8;
+
+  --dfs-color:      #c2410c;
+  --dfs-light:      #ffddcf;
+  --dfs-mid:        #f7b495;
 
   /* Tree connector */
   --connector:      #CBD5E1;
 
   /* shadcn compat (HSL, no hsl() wrapper) */
-  --background: 210 40% 98%;
-  --foreground: 222 47% 11%;
+  --background: 42 30% 97%;
+  --foreground: 45 5% 10%;
   --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
+  --card-foreground: 45 5% 10%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
-  --primary: 221 83% 53%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222 47% 11%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
-  --accent: 210 40% 96%;
-  --accent-foreground: 222 47% 11%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 221 83% 53%;
+  --popover-foreground: 45 5% 10%;
+  --primary: 176 100% 18%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 40 18% 92%;
+  --secondary-foreground: 45 5% 10%;
+  --muted: 38 16% 91%;
+  --muted-foreground: 173 8% 36%;
+  --accent-foreground: 45 5% 10%;
+  --destructive: 20 84% 43%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 165 6% 74%;
+  --input: 165 6% 74%;
+  --ring: 176 100% 18%;
   --radius: 0.75rem;
 
   --sidebar-background: 0 0% 100%;
-  --sidebar-foreground: 222 47% 11%;
-  --sidebar-primary: 221 83% 53%;
-  --sidebar-primary-foreground: 210 40% 98%;
-  --sidebar-accent: 210 40% 96%;
-  --sidebar-accent-foreground: 222 47% 11%;
-  --sidebar-border: 214 32% 91%;
-  --sidebar-ring: 221 83% 53%;
+  --sidebar-foreground: 45 5% 10%;
+  --sidebar-primary: 176 100% 18%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 40 18% 92%;
+  --sidebar-accent-foreground: 45 5% 10%;
+  --sidebar-border: 165 6% 74%;
+  --sidebar-ring: 176 100% 18%;
 }
 
 @layer base {
   html { font-family: var(--font-ui); color-scheme: light; }
+  h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading); }
   body {
-    @apply text-slate-900;
+    @apply text-on-surface;
     -webkit-font-smoothing: antialiased;
     background:
-      radial-gradient(1200px 600px at 10% -10%, rgba(96,165,250,0.18), transparent 60%),
-      radial-gradient(900px 500px at 100% 10%, rgba(167,139,250,0.16), transparent 60%),
-      radial-gradient(700px 500px at 50% 100%, rgba(52,211,153,0.10), transparent 60%),
-      linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+      radial-gradient(1100px 620px at 8% -8%, rgba(15,118,110,0.10), transparent 62%),
+      radial-gradient(960px 520px at 98% 14%, rgba(194,65,12,0.09), transparent 62%),
+      radial-gradient(760px 460px at 50% 102%, rgba(154,103,0,0.06), transparent 60%),
+      linear-gradient(180deg, #fbf9f4 0%, #f2efe8 100%);
     background-attachment: fixed;
   }
 
@@ -97,6 +102,8 @@
 }
 
 @layer utilities {
+  .font-headline { font-family: var(--font-heading); }
+  .font-body { font-family: var(--font-ui); }
   .font-mono { font-family: var(--font-mono); }
 
   /* ── Glassmorphism ──────────────────────────────────────────── */
@@ -127,7 +134,7 @@
 
   /* Text gradients */
   .text-gradient {
-    background: linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #10b981 100%);
+    background: linear-gradient(135deg, #005c55 0%, #0f766e 55%, #9a6700 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;

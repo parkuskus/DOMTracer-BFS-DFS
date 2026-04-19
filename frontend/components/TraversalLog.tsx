@@ -21,16 +21,16 @@ export default function TraversalLog({ logs, algorithm }: TraversalLogProps) {
   const matchCount = logs.filter((l) => l.isMatch).length;
 
   return (
-    <div className="border border-slate-200 rounded-xl overflow-hidden">
+    <div className="border border-outline-variant/30 rounded-xl overflow-hidden bg-surface-container-lowest">
       {/* Header bar */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-200">
+      <div className="flex items-center justify-between px-4 py-2.5 bg-surface-container-low border-b border-outline-variant/25">
         <div className="flex items-center gap-3">
           <div className="flex gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-400" />
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+            <span className="w-2.5 h-2.5 rounded-full bg-bfs" />
+            <span className="w-2.5 h-2.5 rounded-full bg-dfs" />
+            <span className="w-2.5 h-2.5 rounded-full bg-match" />
           </div>
-          <span className="text-[11px] font-mono text-slate-400 tracking-wider">
+          <span className="text-[11px] font-mono text-on-surface-variant tracking-wider">
             traversal.log — {algorithm} — {logs.length} steps
           </span>
         </div>
@@ -41,8 +41,8 @@ export default function TraversalLog({ logs, algorithm }: TraversalLogProps) {
             className={[
               "px-2.5 py-1 text-[10px] font-semibold rounded-md tracking-wide transition-all",
               showOnlyMatches
-                ? "bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200"
-                : "bg-slate-100 text-slate-400 hover:text-slate-600",
+                ? "bg-match-container text-on-match ring-1 ring-match/35"
+                : "bg-surface-container-high text-on-surface-variant hover:text-on-surface",
             ].join(" ")}
           >
             ✦ {matchCount} MATCHES
@@ -50,7 +50,7 @@ export default function TraversalLog({ logs, algorithm }: TraversalLogProps) {
 
           <button
             onClick={() => setIsCollapsed((v) => !v)}
-            className="px-2 py-1 text-[10px] font-mono text-slate-400 hover:text-slate-600 transition-colors"
+            className="px-2 py-1 text-[10px] font-mono text-on-surface-variant hover:text-on-surface transition-colors"
           >
             {isCollapsed ? "▾ EXPAND" : "▴ COLLAPSE"}
           </button>
@@ -59,9 +59,9 @@ export default function TraversalLog({ logs, algorithm }: TraversalLogProps) {
 
       {/* Log entries */}
       {!isCollapsed && (
-        <div className="bg-white max-h-72 overflow-y-auto font-mono text-xs">
+        <div className="bg-surface-container-lowest max-h-72 overflow-y-auto font-mono text-xs">
           {filteredLogs.length === 0 ? (
-            <div className="px-4 py-6 text-center text-slate-400">
+            <div className="px-4 py-6 text-center text-on-surface-variant">
               {showOnlyMatches ? "No matches found." : "No log entries."}
             </div>
           ) : (
@@ -69,12 +69,12 @@ export default function TraversalLog({ logs, algorithm }: TraversalLogProps) {
               <div
                 key={entry.step}
                 className={[
-                  "flex items-start gap-3 px-4 py-1.5 border-b border-slate-100",
-                  "hover:bg-slate-50 transition-colors duration-100",
-                  entry.isMatch ? "bg-emerald-50/50" : "",
+                  "flex items-start gap-3 px-4 py-1.5 border-b border-outline-variant/15",
+                  "hover:bg-surface-container-low transition-colors duration-100",
+                  entry.isMatch ? "bg-match-container/60" : "",
                 ].join(" ")}
               >
-                <span className="text-slate-300 w-7 text-right flex-shrink-0 pt-px">
+                <span className="text-outline w-7 text-right flex-shrink-0 pt-px">
                   {entry.step.toString().padStart(3, "0")}
                 </span>
 
@@ -82,18 +82,18 @@ export default function TraversalLog({ logs, algorithm }: TraversalLogProps) {
                   className={[
                     "flex-shrink-0 w-16 text-center px-1 py-0.5 rounded text-[10px] font-bold",
                     entry.isMatch
-                      ? "bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200"
-                      : "bg-slate-50 text-slate-400",
+                      ? "bg-match-container text-on-match ring-1 ring-match/30"
+                      : "bg-surface-container-high text-on-surface-variant",
                   ].join(" ")}
                 >
                   &lt;{entry.nodeTag}&gt;
                 </span>
 
                 <span
-                  className={entry.isMatch ? "text-emerald-700" : "text-slate-500"}
+                  className={entry.isMatch ? "text-on-match" : "text-on-surface-variant"}
                 >
                   {entry.isMatch && (
-                    <span className="text-emerald-500 mr-1.5">✦</span>
+                    <span className="text-match mr-1.5">✦</span>
                   )}
                   {entry.message}
                 </span>

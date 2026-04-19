@@ -4,7 +4,7 @@
 
 import { useState } from "react";
 import type { AppState, FormState } from "./types";
-import { runTraversal } from "../src/api";
+import { runTraversal } from "./services/api";
 import InputForm from "../components/InputForm";
 import TreeNode from "../components/TreeNode";
 import TreeGraph from "../components/TreeGraph";

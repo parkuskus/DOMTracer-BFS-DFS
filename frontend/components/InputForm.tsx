@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 import type { FormState, ResultLimit } from "../src/types";
+import { Link2, SquareDashedMousePointer, Play } from "lucide-react";
 
 interface InputFormProps {
   onSubmit: (form: FormState) => void;
@@ -26,31 +27,31 @@ export default function InputForm({ onSubmit, isLoading }: InputFormProps) {
   }
 
   const inputClass =
-    "w-full bg-white border border-slate-200 rounded-lg px-4 py-3 text-sm " +
-    "text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-400 " +
-    "focus:ring-2 focus:ring-blue-100 transition-all duration-200";
+    "w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm " +
+    "text-on-surface placeholder:text-outline-variant focus:outline-none focus:ring-2 " +
+    "focus:ring-primary-container/30 transition-all duration-200";
 
-  const labelClass = "block text-[11px] font-semibold text-slate-400 tracking-widest uppercase mb-3";
+  const labelClass = "block font-mono text-[10px] uppercase tracking-widest text-on-surface-variant font-bold px-1 mb-2";
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-5">
       {/* Mode Toggle */}
       <div>
         <label className={labelClass}>Input Mode</label>
-        <div className="flex rounded-lg overflow-hidden border border-slate-200">
+        <div className="flex bg-surface-container-highest p-1 rounded-lg">
           {(["url", "html"] as const).map((mode) => (
             <button
               key={mode}
               type="button"
               onClick={() => setInputMode(mode)}
               className={[
-                "flex-1 py-3.5 text-xs font-semibold tracking-wide transition-all duration-200",
+                "flex-1 py-2 text-xs font-headline font-bold uppercase tracking-wider rounded-md transition-all duration-200",
                 inputMode === mode
-                  ? "bg-blue-50 text-blue-600 border-b-2 border-blue-500"
-                  : "bg-white text-slate-400 hover:text-slate-600 hover:bg-slate-50",
+                  ? "bg-surface-container-lowest text-primary shadow-sm"
+                  : "text-on-surface-variant hover:bg-surface-container-low",
               ].join(" ")}
             >
-              {mode === "url" ? "🌐 URL" : "</> HTML"}
+              {mode === "url" ? "Input URL" : "Input HTML"}
             </button>
           ))}
         </div>
@@ -62,14 +63,17 @@ export default function InputForm({ onSubmit, isLoading }: InputFormProps) {
           {inputMode === "url" ? "Website URL" : "Raw HTML"}
         </label>
         {inputMode === "url" ? (
-          <input
-            type="url"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder="https://example.com"
-            required
-            className={inputClass}
-          />
+          <div className="relative">
+            <input
+              type="url"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="https://example.com"
+              required
+              className={inputClass}
+            />
+            <Link2 className="h-4 w-4 text-outline-variant absolute right-3 top-1/2 -translate-y-1/2" />
+          </div>
         ) : (
           <textarea
             value={inputValue}
@@ -84,7 +88,7 @@ export default function InputForm({ onSubmit, isLoading }: InputFormProps) {
 
       {/* Algorithm */}
       <div>
-        <label className={labelClass}>Traversal Algorithm</label>
+        <label className={labelClass}>Metode Traversal</label>
         <div className="grid grid-cols-2 gap-3">
           {(["BFS", "DFS"] as const).map((algo) => (
             <button
@@ -92,17 +96,16 @@ export default function InputForm({ onSubmit, isLoading }: InputFormProps) {
               type="button"
               onClick={() => setAlgorithm(algo)}
               className={[
-                "relative py-4 px-4 rounded-lg border text-sm font-bold tracking-wide transition-all duration-200",
+                "relative py-3 px-3 rounded-xl text-sm font-bold tracking-wide transition-all duration-200 border",
                 algorithm === algo
                   ? algo === "BFS"
-                    ? "border-violet-300 bg-violet-50 text-violet-700 shadow-sm"
-                    : "border-violet-300 bg-violet-50 text-violet-700 shadow-sm"
-                  : "border-slate-200 bg-white text-slate-400 hover:border-slate-300 hover:text-slate-600",
+                    ? "bg-bfs-container text-on-bfs ring-2 ring-bfs/35 border-bfs"
+                    : "bg-dfs-container text-on-dfs ring-2 ring-dfs/35 border-dfs"
+                  : "bg-surface-container-highest text-on-surface-variant border-transparent hover:border-outline-variant",
               ].join(" ")}
             >
-              <div className="font-mono">{algo}</div>
-              <div className="text-[9px] font-normal opacity-60 mt-0.5">
-                {algo === "BFS" ? "Breadth-First" : "Depth-First"}
+              <div className="text-xs font-headline uppercase tracking-widest">
+                {algo === "BFS" ? "Breadth-First (BFS)" : "Depth-First (DFS)"}
               </div>
             </button>
           ))}
@@ -111,24 +114,27 @@ export default function InputForm({ onSubmit, isLoading }: InputFormProps) {
 
       {/* CSS Selector */}
       <div>
-        <label className={labelClass}>CSS Selector</label>
-        <input
-          type="text"
-          value={cssSelector}
-          onChange={(e) => setCssSelector(e.target.value)}
-          placeholder=".class-name, #id, div > p, [attr]"
-          required
-          className={inputClass + " font-mono"}
-        />
+        <label className={labelClass}>CSS Selector Utama</label>
+        <div className="relative">
+          <input
+            type="text"
+            value={cssSelector}
+            onChange={(e) => setCssSelector(e.target.value)}
+            placeholder="body > main"
+            required
+            className={inputClass + " font-mono"}
+          />
+          <SquareDashedMousePointer className="h-4 w-4 text-outline-variant absolute right-3 top-1/2 -translate-y-1/2" />
+        </div>
         <div className="flex flex-wrap gap-2 mt-6">
           {["div", "p", "a", "h1", ".container", "#main", "img"].map((s) => (
             <button
               key={s}
               type="button"
               onClick={() => setCssSelector(s)}
-              className="px-2.5 py-1.5 text-[10px] font-mono bg-slate-50 text-slate-400 
-                         hover:text-blue-600 hover:bg-blue-50 rounded-md border border-slate-200 
-                         hover:border-blue-200 transition-all duration-150"
+              className="px-2.5 py-1.5 text-[10px] font-mono bg-surface-container-highest text-on-surface-variant
+                         hover:text-primary hover:bg-surface-container-low rounded-md border border-outline-variant/30
+                         hover:border-primary/40 transition-all duration-150"
             >
               {s}
             </button>
@@ -139,7 +145,7 @@ export default function InputForm({ onSubmit, isLoading }: InputFormProps) {
       {/* Result Limit */}
       <div>
         <label className={labelClass}>Result Limit</label>
-        <div className="flex rounded-lg overflow-hidden border border-slate-200 mb-4">
+        <div className="flex rounded-lg overflow-hidden border border-outline-variant/30 mb-4 bg-surface-container-highest">
           {(["all", "top-n"] as const).map((t) => (
             <button
               key={t}
@@ -148,9 +154,9 @@ export default function InputForm({ onSubmit, isLoading }: InputFormProps) {
               className={[
                 "flex-1 py-2.5 text-xs font-semibold tracking-wide transition-all duration-200",
                 limitType === t
-                  ? "bg-blue-50 text-blue-600"
-                  : "bg-white text-slate-400 hover:text-slate-600",
-                "border-r border-slate-200 last:border-r-0",
+                  ? "bg-surface-container-lowest text-primary"
+                  : "text-on-surface-variant hover:text-on-surface",
+                "border-r border-outline-variant/20 last:border-r-0",
               ].join(" ")}
             >
               {t === "all" ? "All Results" : "Top N"}
@@ -168,7 +174,7 @@ export default function InputForm({ onSubmit, isLoading }: InputFormProps) {
               onChange={(e) => setTopN(parseInt(e.target.value) || 1)}
               className={inputClass + " w-28 font-mono"}
             />
-            <span className="text-xs text-slate-400">kemunculan pertama</span>
+            <span className="text-xs text-on-surface-variant">kemunculan pertama</span>
           </div>
         )}
       </div>
@@ -178,20 +184,22 @@ export default function InputForm({ onSubmit, isLoading }: InputFormProps) {
         type="submit"
         disabled={isLoading}
         className={[
-          "w-full py-3 px-2 rounded-lg font-semibold text-sm tracking-wide",
-          "border transition-all duration-300",
+          "w-full py-4 px-2 rounded-xl font-headline font-black text-sm uppercase tracking-[0.2em] transition-all duration-300",
           isLoading
-            ? "border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed"
-            : "border-blue-500 bg-blue-600 text-white hover:bg-blue-700 shadow-sm shadow-blue-200",
+            ? "bg-surface-container-highest text-on-surface-variant cursor-not-allowed"
+            : "bg-primary text-on-primary shadow-lg shadow-primary/10 hover:shadow-primary/20 active:scale-[0.98]",
         ].join(" ")}
       >
         {isLoading ? (
           <span className="flex items-center justify-center gap-2">
-            <span className="inline-block w-3.5 h-3.5 border-2 border-slate-300 border-t-blue-500 rounded-full animate-spin" />
+            <span className="inline-block w-3.5 h-3.5 border-2 border-outline-variant border-t-primary rounded-full animate-spin" />
             Traversing...
           </span>
         ) : (
-          "Run Traversal"
+          <span className="inline-flex items-center justify-center gap-2">
+            Jalankan Traversal
+            <Play className="h-4 w-4" strokeWidth={2.4} />
+          </span>
         )}
       </button>
     </form>
