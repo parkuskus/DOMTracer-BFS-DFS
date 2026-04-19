@@ -46,8 +46,8 @@ const Index = () => {
               <span className="text-white font-display font-black text-sm">D</span>
             </div>
             <div className="flex flex-col leading-tight">
-              <span className="font-display font-bold tracking-tight">DOM Visualizer</span>
-              <span className="text-[11px] text-muted-foreground font-medium">BFS · DFS · Trace</span>
+              <span className="font-display font-bold tracking-tight">DOM Tracer</span>
+              <span className="text-[11px] text-muted-foreground font-medium">BFS & DFS</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -62,13 +62,13 @@ const Index = () => {
       <section className="max-w-[1400px] mx-auto px-6 pt-16 pb-10 lg:pt-24 lg:pb-14 text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/60 border border-white/60 backdrop-blur text-xs font-semibold text-primary mb-6">
           <Sparkles className="w-3.5 h-3.5" />
-          Algorithms · IF2211 · Tubes 2
+          IF2211 - Strategi Algoritma
         </div>
         <h1 className="font-display font-extrabold text-5xl md:text-6xl lg:text-7xl leading-[1.02] tracking-tight text-balance max-w-4xl mx-auto">
           Trace any DOM, <span className="text-gradient">node by node</span>.
         </h1>
         <p className="mt-6 max-w-xl mx-auto text-base md:text-lg text-muted-foreground leading-relaxed">
-          A modern visualizer for breadth-first and depth-first traversal of HTML documents. Inspect the tree, watch the path, measure the cost.
+          A visualizer for breadth-first and depth-first traversal of HTML.
         </p>
       </section>
 
@@ -137,12 +137,8 @@ const Index = () => {
       {/* Footer */}
       <footer className="glass-subtle border-t border-white/50 mt-8">
         <div className="max-w-[1400px] mx-auto px-6 py-8 flex flex-wrap items-center justify-between gap-4">
-          <div className="text-sm text-muted-foreground font-medium">
-            © DOM Visualizer · Set in Sora & Manrope
-          </div>
           <div className="flex items-center gap-2">
-            <span className="chip">Tubes 2</span>
-            <span className="chip">IF2211</span>
+            <span className="chip">© 2026</span>
           </div>
         </div>
       </footer>
