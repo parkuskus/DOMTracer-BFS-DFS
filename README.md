@@ -17,3 +17,7 @@ it's better to do unit testing using *testing go package. We could do testing wi
 ``` bash 
 go test ./... -v #for verbose 
 ```
+
+## API Documentation
+
+Dokumentasi endpoint backend dan contoh penggunaannya ada di [docs/api.md](docs/api.md).
