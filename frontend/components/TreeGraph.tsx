@@ -1,20 +1,20 @@
 import { useMemo, useState } from "react";
-import type { TreeNodeData } from "./lib/mockData";
+import type { TreeNode } from "../src/types";
 
-interface Props { root: TreeNodeData; }
-interface PN { node: TreeNodeData; x: number; y: number; children: PN[]; }
+interface Props { root: TreeNode; }
+interface PN { node: TreeNode; x: number; y: number; children: PN[]; }
 
 const NODE_W = 96;
 const NODE_H = 36;
 const H_GAP = 18;
 const V_GAP = 76;
 
-function leafCount(n: TreeNodeData): number {
+function leafCount(n: TreeNode): number {
   if (!n.children?.length) return 1;
   return n.children.reduce((s, c) => s + leafCount(c), 0);
 }
 
-function layout(n: TreeNodeData, depth: number, xOff: number): { p: PN; w: number } {
+function layout(n: TreeNode, depth: number, xOff: number): { p: PN; w: number } {
   const w = leafCount(n) * (NODE_W + H_GAP);
   if (!n.children?.length) {
     return { p: { node: n, x: xOff + w / 2, y: depth * V_GAP + NODE_H, children: [] }, w };
@@ -35,6 +35,7 @@ function flatten(p: PN, out: PN[] = []): PN[] {
   p.children.forEach((c) => flatten(c, out));
   return out;
 }
+
 function edges(p: PN, out: [PN, PN][] = []): [PN, PN][] {
   for (const c of p.children) { out.push([p, c]); edges(c, out); }
   return out;
@@ -89,13 +90,14 @@ export default function TreeGraph({ root }: Props) {
           ))}
 
           {nodes.map((p) => {
-            const isHover = hover === p.node.id;
+            // Gunakan nodeId (dari backend) sebagai unique key & hover state
+            const isHover = hover === p.node.nodeId;
             const isMatch = p.node.isMatched;
             return (
               <g
-                key={p.node.id}
+                key={p.node.nodeId}
                 transform={`translate(${p.x - NODE_W / 2}, ${p.y - NODE_H / 2})`}
-                onMouseEnter={() => setHover(p.node.id)}
+                onMouseEnter={() => setHover(p.node.nodeId)}
                 onMouseLeave={() => setHover(null)}
                 className="cursor-pointer"
                 filter={isMatch ? "url(#glow)" : undefined}
@@ -105,7 +107,13 @@ export default function TreeGraph({ root }: Props) {
                   height={NODE_H}
                   rx={10}
                   fill={isMatch ? "url(#nodeMatch)" : "hsl(0 0% 100% / 0.85)"}
-                  stroke={isMatch ? "transparent" : isHover ? "hsl(var(--primary))" : "hsl(var(--primary) / 0.25)"}
+                  stroke={
+                    isMatch
+                      ? "transparent"
+                      : isHover
+                      ? "hsl(var(--primary))"
+                      : "hsl(var(--primary) / 0.25)"
+                  }
                   strokeWidth={1.5}
                 />
                 <text

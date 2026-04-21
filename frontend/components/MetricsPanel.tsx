@@ -1,18 +1,18 @@
-import type { PerformanceMetrics } from "./lib/mockData";
-import { Clock, CircleDot, Sparkles, ArrowDown, ShapesIcon } from "lucide-react";
+import type { Metrics } from "../src/types";
+import { Clock, CircleDot, ArrowDown, ShapesIcon } from "lucide-react";
 
 interface Props {
-  metrics: PerformanceMetrics;
-  algorithm: "BFS" | "DFS";
+  metrics: Metrics;
+  algorithm: string;
   selector: string;
 }
 
 export default function MetricsPanel({ metrics, algorithm, selector }: Props) {
   const cards = [
-    { label: "Search time", value: metrics.searchTimeMs.toFixed(3), unit: "ms", Icon: Clock },
-    { label: "Nodes visited", value: metrics.visitedNodeCount.toLocaleString(), unit: "nodes", Icon: CircleDot },
-    { label: "Matches", value: metrics.matchedNodeCount.toLocaleString(), unit: "found", Icon: ShapesIcon },
-    { label: "Max depth", value: String(metrics.maxDepth), unit: "levels", Icon: ArrowDown },
+    { label: "Search time",   value: metrics.searchTimeMs.toFixed(3),          unit: "ms",    Icon: Clock       },
+    { label: "Nodes visited", value: metrics.visitedNodeCount.toLocaleString(), unit: "nodes", Icon: CircleDot   },
+    { label: "Matches",       value: metrics.matchedNodeCount.toLocaleString(), unit: "found", Icon: ShapesIcon  },
+    { label: "Max depth",     value: String(metrics.maxDepth),                  unit: "levels", Icon: ArrowDown  },
   ];
 
   return (

@@ -1,9 +1,9 @@
 import { useState } from "react";
-import type { TreeNodeData } from "./lib/mockData";
+import type { TreeNode as TreeNodeType } from "../src/types";
 import { ChevronDown, ChevronRight, Sparkles } from "lucide-react";
 
 interface Props {
-  node: TreeNodeData;
+  node: TreeNodeType;
   index?: number;
 }
 
@@ -16,8 +16,8 @@ function formatAttrs(a: Record<string, string>) {
 
 export default function TreeNode({ node, index = 0 }: Props) {
   const [open, setOpen] = useState(node.depth < 2);
-  const hasChildren = node.children?.length > 0;
-  const attrs = formatAttrs(node.attributes);
+  const hasChildren = (node.children?.length ?? 0) > 0;
+  const attrs = formatAttrs(node.attributes ?? {});
 
   return (
     <div
@@ -54,6 +54,11 @@ export default function TreeNode({ node, index = 0 }: Props) {
           {attrs && (
             <span className="text-xs text-muted-foreground truncate max-w-md">{attrs}</span>
           )}
+          {node.text && !hasChildren && (
+            <span className="text-xs text-muted-foreground italic truncate max-w-xs">
+              "{node.text.slice(0, 40)}{node.text.length > 40 ? "…" : ""}"
+            </span>
+          )}
           {node.isMatched && (
             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
               <Sparkles className="w-3 h-3" /> match
@@ -65,7 +70,8 @@ export default function TreeNode({ node, index = 0 }: Props) {
       {open && hasChildren && (
         <div className="ml-1">
           {node.children.map((c, i) => (
-            <TreeNode key={c.id} node={c} index={i} />
+            // Gunakan nodeId sebagai key (unik dari backend)
+            <TreeNode key={c.nodeId} node={c} index={i} />
           ))}
         </div>
       )}

@@ -1,10 +1,10 @@
 import { useState } from "react";
-import type { TraversalLogEntry } from "./lib/mockData";
+import type { LogEntry } from "../src/types";
 import { Check, Filter } from "lucide-react";
 
 interface Props {
-  logs: TraversalLogEntry[];
-  algorithm: "BFS" | "DFS";
+  logs: LogEntry[];
+  algorithm: string;
 }
 
 export default function TraversalLog({ logs, algorithm }: Props) {
@@ -53,18 +53,27 @@ export default function TraversalLog({ logs, algorithm }: Props) {
                 ].join(" ")}
                 style={{ animationDelay: `${i * 20}ms` }}
               >
+                {/* Step number */}
                 <span className="w-10 text-xs font-semibold text-muted-foreground tabular-nums">
                   #{String(l.step).padStart(2, "0")}
                 </span>
-                <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-white/70 border border-white/60 text-foreground/70">
-                  d{l.depth}
-                </span>
+
+                {/* Node tag badge */}
                 <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-primary-soft text-primary">
-                  &lt;{l.tag}&gt;
+                  &lt;{l.nodeTag}&gt;
                 </span>
-                <span className="flex-1 text-foreground/80 truncate">{l.note}</span>
+
+                {/* Node path */}
+                <span className="px-2 py-0.5 rounded-md text-[11px] font-mono bg-white/70 border border-white/60 text-foreground/50 hidden sm:block">
+                  {l.nodeId}
+                </span>
+
+                {/* Message */}
+                <span className="flex-1 text-foreground/80 truncate text-xs">{l.message}</span>
+
+                {/* Match indicator */}
                 {l.isMatch && (
-                  <span className="inline-flex items-center gap-1 text-success text-xs font-bold">
+                  <span className="inline-flex items-center gap-1 text-success text-xs font-bold shrink-0">
                     <Check className="w-3.5 h-3.5" /> match
                   </span>
                 )}
