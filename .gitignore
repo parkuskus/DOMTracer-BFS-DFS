@@ -48,3 +48,4 @@ docs/*.md
 
 # Program logs
 backend/logs
+node_modules
