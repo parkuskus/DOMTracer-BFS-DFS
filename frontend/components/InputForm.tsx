@@ -257,7 +257,6 @@ export default function InputForm({ onSubmit, isLoading }: Props) {
           </span>
         ) : (
           <span className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4" />
             Run Traversal
           </span>
         )}

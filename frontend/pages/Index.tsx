@@ -56,7 +56,7 @@ const Index = () => {
       {/* Hero */}
       <section className="max-w-[1400px] mx-auto px-6 pt-16 pb-10 lg:pt-24 lg:pb-14 text-center">
         <h1 className="font-display font-extrabold text-5xl md:text-6xl lg:text-7xl leading-[1.02] tracking-tight text-balance max-w-4xl mx-auto">
-          Trace any DOM, <span className="text-gradient">node by node</span>.
+          Trace your DOM, <span className="text-gradient">node by node</span>
         </h1>
         <p className="mt-6 max-w-xl mx-auto text-base md:text-lg text-muted-foreground leading-relaxed">
           A visualizer for breadth-first and depth-first traversal of HTML.
