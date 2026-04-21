@@ -61,7 +61,7 @@ export default function TreeNode({ node, index = 0 }: Props) {
           )}
           {node.isMatched && (
             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
-              <Sparkles className="w-3 h-3" /> match
+              Match
             </span>
           )}
         </div>

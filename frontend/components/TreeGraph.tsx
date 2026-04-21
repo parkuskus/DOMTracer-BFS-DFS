@@ -9,6 +9,12 @@ const NODE_H = 36;
 const H_GAP = 18;
 const V_GAP = 76;
 
+const COLOR_PRIMARY      = "#6366f1";
+const COLOR_PRIMARY_GLOW = "#818cf8";
+const COLOR_EDGE         = "#6366f180";
+const COLOR_EDGE_HOVER   = "#6366f1";
+const COLOR_EDGE_DIM     = "#6366f140";
+
 function leafCount(n: TreeNode): number {
   if (!n.children?.length) return 1;
   return n.children.reduce((s, c) => s + leafCount(c), 0);
@@ -61,38 +67,36 @@ export default function TreeGraph({ root }: Props) {
       <div className="overflow-auto p-6" style={{ maxHeight: 520 }}>
         <svg width={w} height={h} className="block">
           <defs>
-            <linearGradient id="edge" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.3" />
-              <stop offset="100%" stopColor="hsl(var(--primary-glow))" stopOpacity="0.5" />
-            </linearGradient>
-            <linearGradient id="edgeMatch" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.9" />
-              <stop offset="100%" stopColor="hsl(var(--primary-glow))" stopOpacity="1" />
-            </linearGradient>
-            <linearGradient id="nodeMatch" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--primary))" />
-              <stop offset="100%" stopColor="hsl(var(--primary-glow))" />
+            <linearGradient id="nodeMatchGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%"   stopColor={COLOR_PRIMARY}      />
+              <stop offset="100%" stopColor={COLOR_PRIMARY_GLOW} />
             </linearGradient>
             <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
               <feGaussianBlur stdDeviation="3" result="b" />
-              <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+              <feMerge>
+                <feMergeNode in="b" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
             </filter>
           </defs>
 
+          {/* Edges — garis penghubung */}
           {eds.map(([a, b], i) => (
             <path
               key={i}
               d={`M ${a.x} ${a.y + NODE_H / 2} C ${a.x} ${(a.y + b.y) / 2}, ${b.x} ${(a.y + b.y) / 2}, ${b.x} ${b.y - NODE_H / 2}`}
-              stroke={b.node.isMatched ? "url(#edgeMatch)" : "url(#edge)"}
+              stroke={b.node.isMatched ? COLOR_PRIMARY : COLOR_EDGE}
               strokeWidth={b.node.isMatched ? 2 : 1.5}
               fill="none"
             />
           ))}
 
+          {/* Nodes */}
           {nodes.map((p) => {
-            // Gunakan nodeId (dari backend) sebagai unique key & hover state
-            const isHover = hover === p.node.nodeId;
-            const isMatch = p.node.isMatched;
+            const isHover    = hover === p.node.nodeId;
+            const isMatch    = p.node.isMatched;
+            const isTraversed = p.node.isTraversed;
+
             return (
               <g
                 key={p.node.nodeId}
@@ -106,13 +110,16 @@ export default function TreeGraph({ root }: Props) {
                   width={NODE_W}
                   height={NODE_H}
                   rx={10}
-                  fill={isMatch ? "url(#nodeMatch)" : "hsl(0 0% 100% / 0.85)"}
+                  fill={
+                    isMatch     ? "url(#nodeMatchGrad)" :
+                    isTraversed ? "#ede9fe"             :
+                                  "rgba(255,255,255,0.85)"
+                  }
                   stroke={
-                    isMatch
-                      ? "transparent"
-                      : isHover
-                      ? "hsl(var(--primary))"
-                      : "hsl(var(--primary) / 0.25)"
+                    isMatch     ? "transparent"  :
+                    isHover     ? COLOR_EDGE_HOVER :
+                    isTraversed ? COLOR_PRIMARY    :
+                                  COLOR_EDGE_DIM
                   }
                   strokeWidth={1.5}
                 />
@@ -123,7 +130,7 @@ export default function TreeGraph({ root }: Props) {
                   fontSize="12"
                   fontWeight={isMatch ? 700 : 600}
                   fontFamily="Sora, system-ui, sans-serif"
-                  fill={isMatch ? "white" : "hsl(var(--foreground))"}
+                  fill={isMatch ? "white" : isTraversed ? COLOR_PRIMARY : "#1e1e2e"}
                 >
                   &lt;{p.node.tag}&gt;
                 </text>
