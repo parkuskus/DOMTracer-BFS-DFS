@@ -114,6 +114,30 @@ func ParseHTML(raw string) (*Node, error) {
 				parent := stack[len(stack)-1]
 				parent.Text = text
 			}
+		case html.EndTagToken:
+			name, _ := tokenizer.TagName()
+			tag := string(name)
+
+			for len(stack) > 1 {
+				top := stack[len(stack)-1]
+				stack = stack[:len(stack)-1]
+				if top.Tag == tag {
+					break
+				}
+			}
+		case html.SelfClosingTagToken:
+			name, hasAttr := tokenizer.TagName()
+			tag := string(name)
+
+			node := &Node{
+				Tag:        tag,
+				Attributes: extractAttrsFromTokenizer(tokenizer, hasAttr),
+				Parent:     stack[len(stack)-1],
+				Depth:      len(stack) - 1,
+			}
+			parent := stack[len(stack)-1]
+			parent.Children = append(parent.Children, node)
+
 		}
 	}
 
