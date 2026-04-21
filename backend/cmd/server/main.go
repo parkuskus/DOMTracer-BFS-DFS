@@ -3,8 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -145,10 +147,141 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "time": time.Now().Format(time.RFC3339)})
 }
 
+func parseSearchFormValues(r *http.Request) (traversal.SearchRequest, error) {
+	selector := strings.TrimSpace(r.FormValue("selector"))
+	if selector == "" {
+		return traversal.SearchRequest{}, fmt.Errorf("selector is required")
+	}
+
+	algorithm := strings.ToUpper(strings.TrimSpace(r.FormValue("algorithm")))
+	if algorithm == "" {
+		algorithm = "BFS"
+	}
+
+	limit := 0
+	limitRaw := strings.TrimSpace(r.FormValue("limit"))
+	if limitRaw != "" {
+		parsedLimit, err := strconv.Atoi(limitRaw)
+		if err != nil {
+			return traversal.SearchRequest{}, fmt.Errorf("limit must be an integer")
+		}
+		limit = parsedLimit
+	}
+
+	includeTraversalLog := false
+	if v := strings.TrimSpace(r.FormValue("includeTraversalLog")); v != "" {
+		parsedBool, err := strconv.ParseBool(v)
+		if err != nil {
+			return traversal.SearchRequest{}, fmt.Errorf("includeTraversalLog must be true/false")
+		}
+		includeTraversalLog = parsedBool
+	}
+
+	includePathToMatch := false
+	if v := strings.TrimSpace(r.FormValue("includePathToMatch")); v != "" {
+		parsedBool, err := strconv.ParseBool(v)
+		if err != nil {
+			return traversal.SearchRequest{}, fmt.Errorf("includePathToMatch must be true/false")
+		}
+		includePathToMatch = parsedBool
+	}
+
+	return traversal.SearchRequest{
+		Selector:            selector,
+		Algorithm:           algorithm,
+		Limit:               limit,
+		IncludeTraversalLog: includeTraversalLog,
+		IncludePathToMatch:  includePathToMatch,
+	}, nil
+}
+
+func parseUploadedHTMLRoot(r *http.Request) (*parser.Node, int64, error) {
+	const maxUploadMemory = 10 << 20 // 10 MB
+	if err := r.ParseMultipartForm(maxUploadMemory); err != nil {
+		return nil, 0, fmt.Errorf("invalid multipart form: %w", err)
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		return nil, 0, fmt.Errorf("file is required (field name: file)")
+	}
+	defer file.Close()
+
+	if header.Size == 0 {
+		return nil, 0, fmt.Errorf("uploaded file is empty")
+	}
+
+	rawBytes, err := io.ReadAll(file)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to read uploaded file: %w", err)
+	}
+
+	if len(rawBytes) == 0 {
+		return nil, 0, fmt.Errorf("uploaded file is empty")
+	}
+
+	t0 := time.Now()
+	root, err := parser.ParseHTML(string(rawBytes))
+	parseMs := time.Since(t0).Milliseconds()
+	if err != nil {
+		return nil, 0, fmt.Errorf("parse failed: %w", err)
+	}
+
+	return root, parseMs, nil
+}
+
+func handleScrapeUpload(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, ScrapeResponse{Error: "POST only"})
+		return
+	}
+
+	root, parseMs, err := parseUploadedHTMLRoot(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, ScrapeResponse{Error: err.Error()})
+		return
+	}
+
+	searchReq, err := parseSearchFormValues(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, ScrapeResponse{Error: err.Error()})
+		return
+	}
+
+	result, err := traversal.SearchDOM(root, searchReq)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, ScrapeResponse{Error: err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, ScrapeResponse{
+		OK:      true,
+		Result:  &result,
+		FetchMs: parseMs,
+	})
+}
+
+func handleTreeUpload(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, TreeResponse{Error: "POST only"})
+		return
+	}
+
+	root, _, err := parseUploadedHTMLRoot(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, TreeResponse{Error: err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, TreeResponse{OK: true, Tree: root})
+}
+
 func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/scrape", cors(handleScrape))
+	mux.HandleFunc("/api/scrape-upload", cors(handleScrapeUpload))
 	mux.HandleFunc("/api/tree", cors(handleTree))
+	mux.HandleFunc("/api/tree-upload", cors(handleTreeUpload))
 	mux.HandleFunc("/api/health", cors(handleHealth))
 
 	mux.Handle("/", http.FileServer(http.Dir("./static")))
