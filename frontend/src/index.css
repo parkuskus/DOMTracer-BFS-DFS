@@ -1,0 +1,146 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+
+    --surface: 0 0% 100%;
+    --surface-soft: 214 32% 96%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 217 91% 55%;
+    --primary-foreground: 0 0% 100%;
+    --primary-soft: 217 95% 92%;
+    --primary-glow: 199 95% 65%;
+
+    --secondary: 214 32% 94%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 214 32% 94%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 217 95% 92%;
+    --accent-foreground: 217 91% 35%;
+
+    --success: 158 65% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 32% 88%;
+    --input: 214 32% 88%;
+    --ring: 217 91% 55%;
+
+    --radius: 1rem;
+
+    /* Gradients */
+    --gradient-hero: radial-gradient(80% 60% at 20% 10%, hsl(217 95% 88% / 0.9), transparent 60%),
+                     radial-gradient(60% 50% at 90% 20%, hsl(199 95% 85% / 0.8), transparent 60%),
+                     radial-gradient(70% 60% at 50% 100%, hsl(220 100% 92% / 0.7), transparent 70%);
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 55%), hsl(199 95% 65%));
+    --gradient-glass: linear-gradient(135deg, hsl(0 0% 100% / 0.7), hsl(0 0% 100% / 0.4));
+
+    /* Shadows */
+    --shadow-glass: 0 8px 32px -8px hsl(217 91% 55% / 0.18), 0 1px 0 hsl(0 0% 100% / 0.6) inset;
+    --shadow-soft: 0 4px 20px -6px hsl(217 50% 40% / 0.12);
+    --shadow-glow: 0 0 40px -8px hsl(199 95% 65% / 0.5);
+
+    --sidebar-background: 210 40% 98%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 217 91% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 95% 92%;
+    --sidebar-accent-foreground: 217 91% 35%;
+    --sidebar-border: 214 32% 88%;
+    --sidebar-ring: 217 91% 55%;
+  }
+
+  .dark {
+    --background: 222 47% 7%;
+    --foreground: 210 40% 98%;
+    --surface: 222 40% 11%;
+    --surface-soft: 222 35% 15%;
+    --card: 222 40% 11%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 40% 11%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-soft: 217 60% 22%;
+    --secondary: 222 30% 18%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 222 30% 18%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 60% 22%;
+    --accent-foreground: 217 95% 88%;
+    --border: 222 30% 22%;
+    --input: 222 30% 22%;
+    --ring: 217 91% 60%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  html { font-feature-settings: "ss01", "cv11"; }
+  body {
+    @apply text-foreground antialiased;
+    font-family: 'Manrope', system-ui, sans-serif;
+    background: hsl(var(--background));
+    background-image: var(--gradient-hero);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Sora', system-ui, sans-serif;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer components {
+  .glass {
+    background: hsl(0 0% 100% / 0.6);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid hsl(0 0% 100% / 0.5);
+    box-shadow: var(--shadow-glass);
+  }
+  .glass-strong {
+    background: hsl(0 0% 100% / 0.85);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid hsl(0 0% 100% / 0.6);
+    box-shadow: var(--shadow-glass);
+  }
+  .glass-subtle {
+    background: hsl(0 0% 100% / 0.45);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid hsl(0 0% 100% / 0.5);
+  }
+  .text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold tracking-wide;
+    background: hsl(var(--primary-soft));
+    color: hsl(var(--primary));
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+}
