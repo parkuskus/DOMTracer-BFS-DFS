@@ -1,0 +1,16 @@
+{
+  "description": "Button class selector - 'Add to basket' buttons from books.toscrape.com",
+  "input": {
+    "htmlFile": "test/cases/case_11.html",
+    "selector": ".btn",
+    "algorithm": "DFS",
+    "limit": 0,
+    "includePathToMatch": false
+  },
+  "expected": {
+    "matchCount": 20,
+    "visitedCount": 541,
+    "maxDepthVisited": 13,
+    "stoppedByLimit": false
+  }
+}

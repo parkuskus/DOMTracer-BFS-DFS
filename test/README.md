@@ -6,53 +6,115 @@ HTML input -> Parse DOM -> BFS/DFS traversal + selector matching
 
 ## Struktur Folder
 
-- `test/cases/`: input HTML
-- `test/expected/`: expected output per skenario
+- `test/cases/case_<N>.html`: input HTML test case
+- `test/expected/case_<N>_expected.json`: expected output untuk setiap test
 
 ## Daftar Skenario
 
-1. `case01_basic_article`
-- Tujuan: uji tag selector `article`
+### Unit Test Cases (Manual HTML)
+
+**case_1**: Basic Tag Selector
+- File: `case_1.html`
+- Selector: `article`
 - Algoritma: BFS
 - Limit: semua hasil
+- Tujuan: uji tag selector sederhana pada struktur HTML teratur
 
-2. `case02_adjacent_sibling`
-- Tujuan: uji combinator `img + p`
+**case_2**: Adjacent Sibling Combinator
+- File: `case_2.html`
+- Selector: `img + p`
 - Algoritma: BFS
 - Limit: semua hasil
+- Tujuan: uji combinator adjacent sibling (`+`) untuk elemen yang tepat setelah target
 
-3. `case03_limit_topn`
-- Tujuan: uji class selector `.entry` + Top-N
+**case_3**: Top-N Limit dengan DFS
+- File: `case_3.html`
+- Selector: `.entry`
 - Algoritma: DFS
 - Limit: 2
+- Tujuan: uji mekanisme Top-N limit dan verifikasi `stoppedByLimit=true`
 
-4. `case04_empty_input`
-- Tujuan: uji parser saat HTML kosong
-- Ekspektasi: error `empty document`
-
-5. `case05_class_whitespace_text`
-- Tujuan: uji parsing class dengan banyak spasi + normalisasi text snippet
+**case_4**: Empty Input
+- File: `case_4.html` (kosong)
+- Selector: `*`
 - Algoritma: BFS
+- Ekspektasi: parser error `empty document`
+- Tujuan: uji error handling pada HTML kosong
 
-6. `case06_adjacent_no_match`
-- Tujuan: uji negative case untuk adjacent sibling `img + p`
+**case_5**: Class Selector dengan Whitespace Normalization
+- File: `case_5.html`
+- Selector: `.featured`
 - Algoritma: BFS
+- Tujuan: uji parsing class dengan multiple spaces dan normalisasi text snippet
 
-7. `case07_selector_list_unsupported`
-- Tujuan: uji selector list (`div, p`) yang saat ini belum didukung
-- Ekspektasi: 0 match
+**case_6**: Negative Case - Adjacent Sibling
+- File: `case_6.html`
+- Selector: `img + p`
+- Algoritma: BFS
+- Ekspektasi: 0 matches (order terbalik)
+- Tujuan: verify combinator `+` tidak match ketika elemen dalam urutan salah
 
-8. `case08_malformed_unclosed`
-- Tujuan: uji HTML malformed (tag tidak ditutup)
-- Ekspektasi: parser tetap menghasilkan tree dan traversal jalan
+**case_7**: Selector List (Unsupported)
+- File: `case_7.html`
+- Selector: `div, p`
+- Algoritma: BFS
+- Ekspektasi: 0 matches (comma selector not yet supported)
+- Tujuan: uji handling untuk fitur yang belum diimplementasi
 
-9. `case09_limit_gt_matches`
-- Tujuan: uji limit lebih besar dari jumlah match aktual
-- Ekspektasi: `stoppedByLimit=false`
+**case_8**: Malformed HTML (Unclosed Tags)
+- File: `case_8.html`
+- Selector: `*`
+- Algoritma: DFS
+- Ekspektasi: parser tetap generate tree meski EOF
+- Tujuan: uji robustness parser terhadap HTML yang tidak well-formed
 
-10. `case10_invalid_algorithm`
-- Tujuan: uji handling algoritma invalid
+**case_9**: Limit > Actual Matches
+- File: `case_9.html`
+- Selector: `.entry`
+- Algoritma: DFS
+- Limit: 10
+- Ekspektasi: 2 matches, `stoppedByLimit=false` (tidak force stop)
+- Tujuan: verify limit tidak memaksa berhenti jika matches < limit
+
+**case_10**: Invalid Algorithm
+- File: `case_10.html`
+- Selector: `article`
+- Algoritma: `RANDOM` (invalid)
 - Ekspektasi: error `unsupported algorithm`
+- Tujuan: uji validation untuk input algoritma yang tidak valid
+
+### Integration Test Case (Live Website)
+
+**case_11**: books.toscrape.com - Multiple Selector Tests
+- File: `case_11.html` (51.3 KB)
+- Source: https://books.toscrape.com/ (1 page dengan 20 produk)
+- Test variants dengan berbagai selectors:
+
+1. **case_11a**: Article Tag Selector (BFS)
+   - Selector: `article.product_pod`
+   - Expected: 20 matches, 541 nodes visited
+   - Tujuan: Product cards pada halaman pertama
+
+2. **case_11a2**: Descendant Combinator (BFS)
+   - Selector: `h3 a`
+   - Expected: 20 matches, 541 nodes visited
+   - Tujuan: Book title links dengan descendant combinator
+
+3. **case_11a3**: Class Selector dengan Top-5 Limit (DFS)
+   - Selector: `.price_color`
+   - Limit: 5
+   - Expected: 5 matches, 239 nodes visited, `stoppedByLimit=true`
+   - Tujuan: Harga buku dengan Top-N filtering
+
+4. **case_11b**: Star Rating Selector (BFS)
+   - Selector: `.star-rating`
+   - Expected: 20 matches
+   - Tujuan: Rating display untuk setiap produk
+
+5. **case_11c**: Button Selector (DFS)
+   - Selector: `.btn`
+   - Expected: 20 matches
+   - Tujuan: "Add to basket" buttons pada setiap produk
 
 ## Cara Menjalankan
 
@@ -62,21 +124,26 @@ Jalankan CLI dari folder `backend`:
 go run ./cmd/cli
 ```
 
-Pilih mode `HTML manual`, lalu tempel isi file HTML dari `test/cases/...`.
-Akhiri input HTML dengan `END` pada baris baru.
+Pilih mode input (URL website / HTML manual / File HTML):
+- Mode 1: Input URL website langsung
+- Mode 2: Paste HTML manual, akhiri dengan `END` pada baris baru
+- Mode 3: Baca dari file, contoh: `../test/cases/case_1.html`
 
-Masukkan selector, algoritma, dan limit sesuai field `input` pada file expected JSON.
+Masukkan selector, algoritma (BFS/DFS), dan limit sesuai test description di README ini atau di file expected JSON.
 
-## Catatan Validasi
+## Validasi Expected Output
 
-Bandingkan minimal field berikut dengan expected:
+Bandingkan hasil traversal dengan field di expected JSON:
 
-- jumlah match (`matchCount`)
-- jumlah node dikunjungi (`visitedCount`)
-- depth maksimum (`maxDepthVisited`)
-- status limit (`stoppedByLimit`)
-- daftar node hasil (`matches`): `nodePath`, `tag`, `depth`, `visitStep`, `attributes`, `textSnippet`
+**Wajib divalidasi:**
+- `matchCount`: jumlah elemen yang match selector
+- `visitedCount`: total node yang dikunjungi traversal
+- `maxDepthVisited`: depth maksimum dari root
+- `stoppedByLimit`: apakah traversal stop karena Top-N limit
+- `matches[]`: detail setiap match (nodePath, tag, depth, visitStep, attributes, textSnippet)
 
-`durationMs` tidak dimasukkan ke expected karena bergantung performa runtime mesin.
+**Tidak perlu divalidasi:**
+- `durationMs`: bergantung performa runtime mesin
 
-Untuk case error (`shouldError=true`), validasi cukup pada potongan pesan error (`errorContains`).
+**Error cases:**
+- Field `shouldError=true` dengan `errorContains`: validasi pesan error mengandung substring yang diharapkan

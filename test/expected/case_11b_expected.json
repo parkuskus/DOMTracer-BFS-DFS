@@ -1,0 +1,16 @@
+{
+  "description": "Star rating class selector from books.toscrape.com - all books have star ratings",
+  "input": {
+    "htmlFile": "test/cases/case_11.html",
+    "selector": ".star-rating",
+    "algorithm": "BFS",
+    "limit": 0,
+    "includePathToMatch": false
+  },
+  "expected": {
+    "matchCount": 20,
+    "visitedCount": 541,
+    "maxDepthVisited": 13,
+    "stoppedByLimit": false
+  }
+}

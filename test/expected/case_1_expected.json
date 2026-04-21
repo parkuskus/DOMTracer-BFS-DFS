@@ -11,7 +11,7 @@
   "expected": {
     "matchCount": 2,
     "visitedCount": 5,
-    "maxDepthVisited": 4,
+    "maxDepthVisited": 3,
     "stoppedByLimit": false,
     "matches": [
       {
@@ -26,15 +26,15 @@
         "pathFromRoot": ["html", "body", "section", "article"]
       },
       {
-        "nodePath": "0/0/0/0/0",
+        "nodePath": "0/0/0/1",
         "tag": "article",
-        "depth": 4,
+        "depth": 3,
         "visitStep": 5,
         "attributes": {
           "class": "item"
         },
         "textSnippet": "Beta",
-        "pathFromRoot": ["html", "body", "section", "article", "article"]
+        "pathFromRoot": ["html", "body", "section", "article"]
       }
     ]
   }

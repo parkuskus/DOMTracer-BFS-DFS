@@ -11,7 +11,7 @@
   "expected": {
     "matchCount": 2,
     "visitedCount": 5,
-    "maxDepthVisited": 4,
+    "maxDepthVisited": 3,
     "stoppedByLimit": true,
     "matches": [
       {
@@ -25,9 +25,9 @@
         "textSnippet": "One"
       },
       {
-        "nodePath": "0/0/0/0/0",
+        "nodePath": "0/0/0/1",
         "tag": "li",
-        "depth": 4,
+        "depth": 3,
         "visitStep": 5,
         "attributes": {
           "class": "entry"
