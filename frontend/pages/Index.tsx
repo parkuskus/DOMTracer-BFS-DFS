@@ -139,7 +139,7 @@ const Index = () => {
                   <p className="text-sm text-muted-foreground break-all">{error}</p>
                   {!backendOnline && (
                     <p className="text-xs text-muted-foreground mt-2 bg-muted/50 rounded-lg p-3 font-mono">
-                      $ go run ./backend/main.go
+                      $ go run ./main.go
                     </p>
                   )}
                 </div>
