@@ -12,12 +12,39 @@
 \usepackage{caption}
 \usepackage{subcaption}
 \usepackage{float}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
 \bibliographystyle{IEEEtran}
 % ---------- Paket lain ----------
 \usepackage[most]{tcolorbox}
 \usepackage{forest}
 \usepackage{hyperref}
 \usepackage{fancyhdr}
+
+% Environment pseudocode bergaya IEEE dengan bingkai,
+% non-float agar dapat terpecah ke halaman berikutnya.
+\newenvironment{ieeealgorithm}[1]{%
+	\refstepcounter{algorithm}%
+	\begin{tcolorbox}[
+		enhanced,
+		breakable,
+		colback=white,
+		colframe=black,
+		colbacktitle=black,
+		boxrule=0.6pt,
+		title={Algorithm \thealgorithm: #1},
+		fonttitle=\bfseries,
+		coltitle=white,
+		left=1mm,
+		right=1mm,
+		top=0.7mm,
+		bottom=0.7mm
+	]
+	\begin{algorithmic}[1]
+}{%
+	\end{algorithmic}
+	\end{tcolorbox}
+}
 
 \usepackage{titlesec}
 

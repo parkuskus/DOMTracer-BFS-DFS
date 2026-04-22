@@ -1,0 +1,177 @@
+\section{Pendekatan Umum}
+
+Pendekatan utama pada aplikasi ini berfokus pada dua strategi traversal pohon DOM, yaitu Breadth-First Search (BFS) dan Depth-First Search (DFS). Sebelum traversal dijalankan, masukan HTML terlebih dahulu diparse menjadi pohon DOM agar setiap elemen memiliki relasi parent-child yang jelas. Setelah struktur pohon terbentuk, selector CSS dipakai sebagai filter untuk menentukan node mana yang dianggap cocok selama proses penelusuran.
+
+Pada BFS, penelusuran dilakukan per level menggunakan queue (FIFO), sehingga node yang lebih dekat ke akar diproses lebih dahulu. Karakter ini membuat BFS cocok ketika tujuan utama adalah menemukan elemen yang berada pada kedalaman dangkal atau ketika urutan hasil berdasarkan level lebih diutamakan. Selama traversal, setiap node yang dikunjungi tetap dievaluasi terhadap selector, sehingga hasil tidak hanya bergantung pada urutan kunjungan, tetapi juga pada kecocokan kriterianya.
+
+Pada DFS, penelusuran dilakukan sedalam mungkin pada satu cabang menggunakan stack (LIFO), lalu melakukan backtrack ke cabang lain. Pendekatan ini cocok untuk eksplorasi struktur yang dalam karena sistem segera masuk ke subtree sebelum berpindah ke sibling berikutnya. Seperti pada BFS, selector tetap dievaluasi di setiap langkah agar hanya node yang memenuhi kriteria yang dicatat sebagai match.
+
+Perbedaan inti BFS dan DFS pada implementasi ini terletak pada urutan kunjungan node, jejak traversal, serta kemungkinan waktu tercapainya limit hasil. Meskipun urutan temuan dapat berbeda, keduanya menggunakan aturan selector yang sama dan menghasilkan keluaran dalam f  ormat metrik yang sama, seperti jumlah node dikunjungi, kedalaman maksimum, dan durasi eksekusi.
+
+\section{Parsing}
+
+Parsing pada program ini bertujuan mengubah dokumen HTML mentah menjadi representasi pohon DOM yang dapat ditelusuri oleh BFS maupun DFS. Tahap ini menjadi fondasi karena kualitas hasil traversal sangat bergantung pada ketepatan struktur parent-child yang dibentuk saat parsing. Implementasi di backend menggunakan tokenizer HTML berbasis stream dari pustaka \texttt{golang.org/x/net/html}, sehingga dokumen dibaca token per token tanpa perlu membangun representasi string antara yang besar di memori.
+
+Pendekatan yang dipakai adalah kombinasi \textit{token stream processing} dan \textit{stack-based tree construction}. Program membuat node akar semu \texttt{document} dengan kedalaman \texttt{-1}, lalu memelihara stack elemen aktif untuk menentukan parent dari token yang sedang diproses. Ketika menemukan \texttt{StartTagToken}, parser membuat node baru, menyalin atribut dari tokenizer, menautkan node tersebut ke parent pada puncak stack, dan mendorongnya ke stack jika tag bukan \textit{self-closing}. Ketika menemukan \texttt{TextToken}, isi teks dibersihkan dengan \texttt{TrimSpace}; jika tidak kosong, teks disimpan pada node yang sedang aktif. Ketika menemukan \texttt{EndTagToken}, stack dipop sampai tag yang sesuai ditemukan sehingga parser tetap toleran terhadap struktur penutup yang tidak rapi. Untuk \texttt{SelfClosingTagToken}, node tetap dibuat dan ditautkan ke parent, tetapi tidak didorong ke stack. Saat \texttt{ErrorToken} mencapai \texttt{EOF}, parser mengembalikan elemen akar HTML pertama sebagai root hasil parsing.
+
+\subsection{Pseudocode Algoritma Parsing}
+
+\begin{ieeealgorithm}{ParseHTML}
+    \Require \texttt{rawHTML} berupa string HTML
+    \Ensure \texttt{rootNode} atau \texttt{error}
+    \State \texttt{tokenizer} $\gets$ \textsc{NewHTMLTokenizer}(\texttt{rawHTML})
+    \State \texttt{sentinel} $\gets$ Node(tag = \texttt{"document"}, depth = $-1$)
+    \State \texttt{stack} $\gets$ [\texttt{sentinel}]
+    \While{true}
+    \State \texttt{tokenType} $\gets$ \texttt{tokenizer.Next()}
+    \If{\texttt{tokenType} = ErrorToken}
+    \If{\texttt{tokenizer.Err()} = EOF}
+    \If{\texttt{sentinel.children} tidak kosong}
+    \State \Return \texttt{sentinel.children[0]}
+    \Else
+    \State \Return \texttt{error("empty document")}
+    \EndIf
+    \EndIf
+    \ElsIf{\texttt{tokenType} = StartTagToken}
+    \State \texttt{tag, hasAttr} $\gets$ \texttt{tokenizer.TagName()}
+    \State \texttt{attrs} $\gets$ \textsc{ExtractAttributes}(\texttt{tokenizer}, \texttt{hasAttr})
+    \State \texttt{parent} $\gets$ \texttt{top(stack)}
+    \State \texttt{node} $\gets$ Node(tag = \texttt{tag}, attrs = \texttt{attrs}, parent = \texttt{parent}, depth = $|stack|-1$)
+    \State tambahkan \texttt{node} ke \texttt{parent.children}
+    \If{\texttt{tag} bukan anggota \texttt{SelfClosingTagSet}}
+    \State \texttt{push(stack, node)}
+    \EndIf
+    \ElsIf{\texttt{tokenType} = TextToken}
+    \State \texttt{txt} $\gets$ \textsc{TrimSpace}(\texttt{tokenizer.Text()})
+    \If{\texttt{txt} $\neq$ \texttt{""}}
+    \State \texttt{top(stack).text} $\gets$ \texttt{txt}
+    \EndIf
+    \ElsIf{\texttt{tokenType} = EndTagToken}
+    \State \texttt{closingTag} $\gets$ \texttt{tokenizer.TagName()}
+    \While{$|stack| > 1$}
+    \State \texttt{topNode} $\gets$ \texttt{pop(stack)}
+    \If{\texttt{topNode.tag} = \texttt{closingTag}}
+    \State \textbf{break}
+    \EndIf
+    \EndWhile
+    \ElsIf{\texttt{tokenType} = SelfClosingTagToken}
+    \State \texttt{tag, hasAttr} $\gets$ \texttt{tokenizer.TagName()}
+    \State \texttt{attrs} $\gets$ \textsc{ExtractAttributes}(\texttt{tokenizer}, \texttt{hasAttr})
+    \State \texttt{parent} $\gets$ \texttt{top(stack)}
+    \State \texttt{node} $\gets$ Node(tag = \texttt{tag}, attrs = \texttt{attrs}, parent = \texttt{parent}, depth = $|stack|-1$)
+    \State tambahkan \texttt{node} ke \texttt{parent.children}
+    \EndIf
+    \EndWhile
+\end{ieeealgorithm}
+
+\begin{ieeealgorithm}{ExtractAttributes}
+    \Require \texttt{tokenizer}, \texttt{hasAttr}
+    \Ensure \texttt{attrs} berupa map key-value atribut
+    \State \texttt{attrs} $\gets$ map kosong
+    \If{\texttt{hasAttr} = false}
+    \State \Return \texttt{attrs}
+    \EndIf
+    \Repeat
+    \State \texttt{key, value, more} $\gets$ \texttt{tokenizer.TagAttr()}
+    \State \texttt{attrs[key]} $\gets$ \texttt{value}
+    \Until{\texttt{more} = false}
+    \State \Return \texttt{attrs}
+\end{ieeealgorithm}
+
+\subsection{Jenis File HTML yang Dapat Dimasukkan}
+
+Program menerima masukan HTML dari tiga sumber, yaitu URL (melalui HTTP GET), berkas lokal, dan string HTML manual. Untuk berkas lokal, ekstensi yang umum seperti \texttt{.html} dan \texttt{.htm} dapat diproses selama kontennya valid sebagai dokumen HTML teks. Karena parsing menggunakan tokenizer HTML5 yang toleran, dokumen dengan struktur tidak sepenuhnya rapi seperti tag yang tidak tertutup sempurna tetap dapat diparse dalam banyak kasus. Implementasi juga mendukung elemen \textit{void/self-closing} populer seperti \texttt{img}, \texttt{br}, \texttt{hr}, \texttt{input}, \texttt{meta}, \texttt{link}, dan sejenisnya. Sebaliknya, parser ini tidak menargetkan semantik XML ketat atau kebutuhan namespace khusus, sehingga fokusnya tetap pada HTML web umum untuk kebutuhan traversal selector.
+
+\subsection{Contoh Masukan dan Keluaran Parsing}
+
+Contoh pertama memperlihatkan masukan sederhana dengan elemen bertingkat dan atribut. Setelah diparse, keluaran berupa node root \texttt{html} beserta subtree lengkapnya.
+
+\begin{tcblisting}{
+        breakable,
+        colback=gray!3,
+        colframe=black!60,
+        title=Contoh 1: Input dan Output Parsing,
+        listing only,
+        left=1mm,
+        right=1mm,
+        top=1mm,
+        bottom=1mm
+    }
+    Input HTML
+    <html>
+    <body id="main">
+    <section class="catalog">
+    <article class="item featured">Alpha</article>
+    <article class="item">Beta</article>
+    </section>
+    </body>
+    </html>
+
+    Output (ringkas)
+    {
+    "tag": "html",
+    "depth": 0,
+    "children": [
+    {
+    "tag": "body",
+    "attributes": {"id": "main"},
+    "depth": 1,
+    "children": [
+    {
+    "tag": "section",
+    "attributes": {"class": "catalog"},
+    "depth": 2,
+    "children": [
+    {
+    "tag": "article",
+    "attributes": {"class": "item featured"},
+    "text": "Alpha",
+    "depth": 3
+    },
+    {
+    "tag": "article",
+    "attributes": {"class": "item"},
+    "text": "Beta",
+    "depth": 3
+    }
+    ]
+    }
+    ]
+    }
+    ]
+    }
+\end{tcblisting}
+
+Contoh kedua menekankan penanganan elemen \textit{self-closing}. Elemen \texttt{img} tetap masuk sebagai node anak, tetapi tidak mengubah stack kedalaman karena tidak memiliki pasangan \texttt{EndTag}.
+
+\begin{tcblisting}{
+        breakable,
+        colback=gray!3,
+        colframe=black!60,
+        title=Contoh 2: Self-Closing Tag,
+        listing only,
+        left=1mm,
+        right=1mm,
+        top=1mm,
+        bottom=1mm
+    }
+    Input HTML
+    <html>
+    <body>
+    <div>
+    <img class="hero" />
+    <p id="lead">Intro</p>
+    </div>
+    </body>
+    </html>
+
+    Output (ringkas)
+    html(depth=0)
+    body(depth=1)
+    div(depth=2)
+    img[class="hero"](depth=3)
+    p[id="lead"] text="Intro" (depth=3)
+\end{tcblisting}
+
+Dengan pendekatan ini, hasil parsing konsisten untuk dipakai pada tahap selector matching dan traversal BFS/DFS, karena struktur pohon, atribut, teks, dan kedalaman node sudah tersedia secara eksplisit sejak awal proses.
+

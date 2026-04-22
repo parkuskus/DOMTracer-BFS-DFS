@@ -1,0 +1,16 @@
+    Input HTML
+    <html>
+    <body>
+    <div>
+    <img class="hero" />
+    <p id="lead">Intro</p>
+    </div>
+    </body>
+    </html>
+
+    Output (ringkas)
+    html(depth=0)
+    body(depth=1)
+    div(depth=2)
+    img[class="hero"](depth=3)
+    p[id="lead"] text="Intro" (depth=3)
