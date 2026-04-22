@@ -6,13 +6,13 @@ Pada BFS, penelusuran dilakukan per level menggunakan queue (FIFO), sehingga nod
 
 Pada DFS, penelusuran dilakukan sedalam mungkin pada satu cabang menggunakan stack (LIFO), lalu melakukan backtrack ke cabang lain. Pendekatan ini cocok untuk eksplorasi struktur yang dalam karena sistem segera masuk ke subtree sebelum berpindah ke sibling berikutnya. Seperti pada BFS, selector tetap dievaluasi di setiap langkah agar hanya node yang memenuhi kriteria yang dicatat sebagai match.
 
-Perbedaan inti BFS dan DFS pada implementasi ini terletak pada urutan kunjungan node, jejak traversal, serta kemungkinan waktu tercapainya limit hasil. Meskipun urutan temuan dapat berbeda, keduanya menggunakan aturan selector yang sama dan menghasilkan keluaran dalam format metrik yang sama, seperti jumlah node dikunjungi, kedalaman maksimum, dan durasi eksekusi.
+Perbedaan paling mencolok dari BFS dan DFS pada implementasi ini terletak pada urutan kunjungan node, jejak traversal, serta kemungkinan waktu tercapainya limit hasil. Meskipun urutan temuan dapat berbeda, keduanya menggunakan aturan selector yang sama dan menghasilkan keluaran dalam format metrik yang sama, seperti jumlah node dikunjungi, kedalaman maksimum, dan durasi eksekusi.
 
 \section{Parsing}
 
 Parsing pada program ini bertujuan mengubah dokumen HTML mentah menjadi representasi pohon DOM yang dapat ditelusuri oleh BFS maupun DFS. Tahap ini menjadi fondasi karena kualitas hasil traversal sangat bergantung pada ketepatan struktur parent-child yang dibentuk saat parsing. Implementasi di backend menggunakan tokenizer HTML berbasis stream dari pustaka \texttt{golang.org/x/net/html}, sehingga dokumen dibaca token per token tanpa perlu membangun representasi string antara yang besar di memori.
 
-Pendekatan yang dipakai adalah kombinasi \textit{token stream processing} dan \textit{stack-based tree construction}. Program membuat node akar semu \texttt{document} dengan kedalaman \texttt{-1}, lalu memelihara stack elemen aktif untuk menentukan parent dari token yang sedang diproses. Ketika menemukan \texttt{StartTagToken}, parser membuat node baru, menyalin atribut dari tokenizer, menautkan node tersebut ke parent pada puncak stack, dan mendorongnya ke stack jika tag bukan \textit{self-closing}. Ketika menemukan \texttt{TextToken}, isi teks dibersihkan dengan \texttt{TrimSpace}; jika tidak kosong, teks disimpan pada node yang sedang aktif. Ketika menemukan \texttt{EndTagToken}, stack dipop sampai tag yang sesuai ditemukan sehingga parser tetap toleran terhadap struktur penutup yang tidak rapi. Untuk \texttt{SelfClosingTagToken}, node tetap dibuat dan ditautkan ke parent, tetapi tidak didorong ke stack. Saat \texttt{ErrorToken} mencapai \texttt{EOF}, parser mengembalikan elemen akar HTML pertama sebagai root hasil parsing.
+Pendekatan yang dipakai adalah kombinasi \textit{token stream processing} dan \textit{stack-based tree construction}. Program membuat node akar semu \texttt{document} dengan kedalaman \texttt{-1}, lalu memelihara stack elemen aktif untuk menentukan parent dari token yang sedang diproses. Ketika menemukan \texttt{StartTagToken}, parser membuat node baru, menyalin atribut dari tokenizer, menautkan node tersebut ke parent pada puncak stack, dan mendorongnya ke stack jika tag bukan \textit{self-closing}. Ketika menemukan \texttt{TextToken}, isi teks dibersihkan dengan \texttt{TrimSpace}. Jika tidak kosong, teks disimpan pada node yang sedang aktif. Ketika menemukan \texttt{EndTagToken}, stack dipop sampai tag yang sesuai ditemukan sehingga parser tetap toleran terhadap struktur penutup yang tidak rapi. Untuk \texttt{SelfClosingTagToken}, node tetap dibuat dan ditautkan ke parent, tetapi tidak didorong ke stack. Saat \texttt{ErrorToken} mencapai \texttt{EOF}, parser mengembalikan elemen akar HTML pertama sebagai root hasil parsing.
 
 \subsection{Pseudocode Algoritma Parsing}
 
@@ -97,7 +97,7 @@ Contoh pertama memperlihatkan masukan sederhana dengan elemen bertingkat dan atr
         top=1mm,
         bottom=1mm
     }
-    Input HTML
+    // INPUT HTML
     <html>
     <body id="main">
     <section class="catalog">
@@ -107,7 +107,8 @@ Contoh pertama memperlihatkan masukan sederhana dengan elemen bertingkat dan atr
     </body>
     </html>
 
-    Output (ringkas)
+
+    // OUTPUT
     {
     "tag": "html",
     "depth": 0,
@@ -155,7 +156,7 @@ Contoh kedua menekankan penanganan elemen \textit{self-closing}. Elemen \texttt{
         top=1mm,
         bottom=1mm
     }
-    Input HTML
+    // INPUT HTML
     <html>
     <body>
     <div>
@@ -165,7 +166,7 @@ Contoh kedua menekankan penanganan elemen \textit{self-closing}. Elemen \texttt{
     </body>
     </html>
 
-    Output (ringkas)
+    // OUTPUT
     html(depth=0)
     body(depth=1)
     div(depth=2)
@@ -183,7 +184,7 @@ Pada awal proses, selector dinormalisasi dengan menambahkan spasi di sekitar ope
 
 \subsection{Selector Legal dan Tidak Legal}
 
-Selector yang legal adalah selector yang benar-benar didukung oleh implementasi fungsi \texttt{MatchSelector} dan \texttt{Match}. Pada implementasi saat ini, selector sederhana yang legal mencakup tag selector, class selector tunggal, id selector tunggal, dan universal selector. Selain itu, selector relasional dengan combinator \texttt{space} (descendant), \texttt{>} (child), \texttt{+} (adjacent sibling), dan \texttt{\textasciitilde{}} (general sibling) juga legal selama setiap operand kiri-kanannya berupa selector sederhana yang didukung.
+Selector yang legal adalah selector yang benar-benar didukung oleh implementasi fungsi \texttt{MatchSelector} dan \texttt{Match}. Pada implementasi, selector sederhana yang legal mencakup tag selector, class selector tunggal, id selector tunggal, dan universal selector. Selain itu, selector relasional dengan combinator \texttt{space} (descendant), \texttt{>} (child), \texttt{+} (adjacent sibling), dan \texttt{\textasciitilde{}} (general sibling) juga legal selama setiap operand kiri dan kanannya berupa selector sederhana yang didukung.
 
 \begin{tcblisting}{
         breakable,
@@ -285,7 +286,7 @@ Untuk combinator, pemrosesan dilakukan pada fungsi \texttt{Match}. Combinator \t
 
 \subsection{Contoh Penggunaan Selector pada File HTML}
 
-Contoh berikut memperlihatkan satu file HTML sederhana dan beberapa selector legal beserta hasil yang didapatkan. Tujuannya adalah menunjukkan bagaimana perbedaan jenis selector menghasilkan himpunan node yang berbeda walaupun dokumennya sama.
+Contoh berikut memperlihatkan satu file HTML sederhana dan beberapa selector legal beserta hasil yang didapatkan.
 
 \begin{tcblisting}{
         breakable,
@@ -323,7 +324,7 @@ Pada BFS, node dieksplorasi per level memakai queue (FIFO). Node root dikunjungi
 
 Selain urutan eksplorasi, traversal juga menangani metrik dan kondisi berhenti dini. Setiap kunjungan menaikkan \texttt{VisitedCount}, memperbarui \texttt{MaxDepthVisited}, lalu memanggil \texttt{selector.Match}. Jika cocok, node disimpan ke \texttt{Matches} dengan metadata seperti \texttt{nodePath}, \texttt{depth}, dan \texttt{visitStep}. Jika \texttt{IncludeTraversalLog} aktif, event kunjungan juga dicatat. Ketika \texttt{Limit > 0} dan jumlah match telah mencapai limit, traversal berhenti lebih awal dengan \texttt{StoppedByLimit = true}.
 
-\subsection{Pseudocode BFS dan DFS Berdasarkan Program}
+\subsection{Pseudocode BFS dan DFS}
 
 \begin{ieeealgorithm}{SearchDOM}
     \Require \texttt{root}, \texttt{req} berisi selector, algorithm, limit, opsi log
@@ -492,9 +493,9 @@ Untuk selector \texttt{p}, urutan kunjungan BFS pada pohon di atas adalah
                     [section\\(3)\\depth 2
                             [article Alpha\\(4)\\depth 3]
                             [article featured\\(5)\\depth 3
-                                    [p Intro\\(7)\\depth 4]
+                                    [p Intro\\(6)\\depth 4]
                             ]
-                            [p Outside\\(6)\\depth 3]
+                            [p Outside\\(7)\\depth 3]
                     ]
             ]
         ]
@@ -504,7 +505,7 @@ Untuk selector \texttt{p}, urutan kunjungan BFS pada pohon di atas adalah
 
 \subsubsection{Hasil Eksplorasi DFS}
 
-Untuk selector \texttt{p}, urutan kunjungan DFS (pre-order, left-to-right sesuai implementasi) adalah:
+Untuk selector \texttt{p}, urutan kunjungan DFS (pre-order, left-to-right sesuai implementasi) adalah
 \texttt{html} $\rightarrow$ \texttt{body} $\rightarrow$ \texttt{section} $\rightarrow$ \texttt{article(Alpha)} $\rightarrow$ \texttt{article(featured)} $\rightarrow$ \texttt{p(Intro)} $\rightarrow$ \texttt{p(Outside)}.
 
 \begin{figure}[H]
