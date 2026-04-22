@@ -58,7 +58,7 @@ export default function TreeGraph({ root }: Props) {
         <span className="text-sm font-semibold text-foreground/80">Tree graph</span>
         <span className="text-xs text-muted-foreground font-medium">{nodes.length} nodes</span>
       </header>
-      <div className="overflow-auto p-6" style={{ maxHeight: 520 }}>
+      <div className="overflow-auto p-6 flex-1 min-h-0">
         <svg width={w} height={h} className="block">
           <defs>
             <linearGradient id="edge" x1="0" y1="0" x2="0" y2="1">
@@ -79,18 +79,21 @@ export default function TreeGraph({ root }: Props) {
             </filter>
           </defs>
 
-          {eds.map(([a, b], i) => (
-            <path
-              key={i}
-              d={`M ${a.x} ${a.y + NODE_H / 2} C ${a.x} ${(a.y + b.y) / 2}, ${b.x} ${(a.y + b.y) / 2}, ${b.x} ${b.y - NODE_H / 2}`}
-              stroke={b.node.isMatched ? "url(#edgeMatch)" : "url(#edge)"}
-              strokeWidth={b.node.isMatched ? 2 : 1.5}
-              fill="none"
-            />
-          ))}
+            {eds.map(([a, b], i) => {
+            const targetX = a.x === b.x ? b.x + 0.1 : b.x;
+
+            return (
+              <path
+                key={i}
+                d={`M ${a.x} ${a.y + NODE_H / 2} C ${a.x} ${(a.y + b.y) / 2}, ${targetX} ${(a.y + b.y) / 2}, ${targetX} ${b.y - NODE_H / 2}`}
+                stroke={b.node.isMatched ? "url(#edgeMatch)" : "url(#edge)"}
+                strokeWidth={b.node.isMatched ? 2 : 1.5}
+                fill="none"
+              />
+            );
+          })}
 
           {nodes.map((p) => {
-            // Gunakan nodeId (dari backend) sebagai unique key & hover state
             const isHover = hover === p.node.nodeId;
             const isMatch = p.node.isMatched;
             return (

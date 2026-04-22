@@ -70,7 +70,6 @@ export default function TreeNode({ node, index = 0 }: Props) {
       {open && hasChildren && (
         <div className="ml-1">
           {node.children.map((c, i) => (
-            // Gunakan nodeId sebagai key (unik dari backend)
             <TreeNode key={c.nodeId} node={c} index={i} />
           ))}
         </div>

@@ -13,7 +13,7 @@ export default function TraversalLog({ logs, algorithm }: Props) {
   const matchCount = logs.filter((l) => l.isMatch).length;
 
   return (
-    <div className="glass rounded-2xl overflow-hidden">
+    <div className="glass rounded-2xl overflow-hidden flex flex-col h-full">
       <header className="flex items-center justify-between px-5 py-3.5 border-b border-white/50 bg-white/40">
         <div className="flex items-center gap-2">
           <div className="flex gap-1.5">
@@ -39,7 +39,7 @@ export default function TraversalLog({ logs, algorithm }: Props) {
         </button>
       </header>
 
-      <div className="max-h-80 overflow-y-auto">
+      <div className="overflow-y-auto flex-1 min-h-0">
         {filtered.length === 0 ? (
           <div className="px-4 py-12 text-center text-muted-foreground text-sm">No entries.</div>
         ) : (
