@@ -315,3 +315,225 @@ Pada file tersebut, selector \texttt{article} menghasilkan dua node karena ada d
 
 Sebagai pembanding, jika pada file yang sama digunakan selector tidak legal seperti \texttt{article.card} atau \texttt{p:first-child}, implementasi saat ini tidak memiliki parser khusus untuk bentuk tersebut sehingga hasilnya cenderung kosong. Oleh karena itu, untuk memperoleh hasil yang konsisten, pengguna harus menyusun query menggunakan bentuk selector yang memang didukung oleh modul selector.
 
+\section{Traversal}
+
+Traversal adalah tahap pencarian node pada pohon DOM yang sudah dihasilkan parser. Pada implementasi ini, traversal bekerja di atas struktur \texttt{Node} yang menyimpan relasi parent-child, lalu mengunjungi node satu per satu sambil menjalankan selector matching. Program mendukung dua strategi, yaitu Breadth-First Search (BFS) dan Depth-First Search (DFS), dengan antarmuka yang sama melalui fungsi \texttt{SearchDOM}. Perbedaan keduanya bukan pada kriteria selector, tetapi pada urutan node yang dikunjungi.
+
+Pada BFS, node dieksplorasi per level memakai queue (FIFO). Node root dikunjungi lebih dulu, lalu semua anak level berikutnya, dan seterusnya. Strategi ini cocok ketika elemen target cenderung berada di kedalaman yang dangkal. Pada DFS, node dieksplorasi sedalam mungkin di satu cabang memakai stack (LIFO), baru kemudian backtrack ke cabang lain. Pada kode program, urutan sibling kiri-ke-kanan tetap dipertahankan dengan mendorong anak ke stack dari kanan ke kiri.
+
+Selain urutan eksplorasi, traversal juga menangani metrik dan kondisi berhenti dini. Setiap kunjungan menaikkan \texttt{VisitedCount}, memperbarui \texttt{MaxDepthVisited}, lalu memanggil \texttt{selector.Match}. Jika cocok, node disimpan ke \texttt{Matches} dengan metadata seperti \texttt{nodePath}, \texttt{depth}, dan \texttt{visitStep}. Jika \texttt{IncludeTraversalLog} aktif, event kunjungan juga dicatat. Ketika \texttt{Limit > 0} dan jumlah match telah mencapai limit, traversal berhenti lebih awal dengan \texttt{StoppedByLimit = true}.
+
+\subsection{Pseudocode BFS dan DFS Berdasarkan Program}
+
+\begin{ieeealgorithm}{SearchDOM}
+    \Require \texttt{root}, \texttt{req} berisi selector, algorithm, limit, opsi log
+    \Ensure \texttt{SearchResult} atau \texttt{error}
+    \If{\texttt{root = nil}}
+    \State \Return \texttt{error("root cannot be nil")}
+    \EndIf
+    \If{selector kosong}
+    \State \Return \texttt{error("selector cannot be empty")}
+    \EndIf
+    \State \texttt{algo} $\gets$ uppercase(trim(\texttt{req.algorithm}))
+    \If{\texttt{algo} kosong}
+    \State \texttt{algo} $\gets$ \texttt{BFS}
+    \EndIf
+    \If{\texttt{algo = BFS}}
+    \State \texttt{res} $\gets$ \textsc{searchBFS}(\texttt{root}, \texttt{req})
+    \ElsIf{\texttt{algo = DFS}}
+    \State \texttt{res} $\gets$ \textsc{searchDFS}(\texttt{root}, \texttt{req})
+    \Else
+    \State \Return \texttt{error("unsupported algorithm")}
+    \EndIf
+    \State isi \texttt{res.algorithmUsed} dan \texttt{res.selectorUsed}
+    \State \Return \texttt{res}
+\end{ieeealgorithm}
+
+\begin{ieeealgorithm}{searchBFS}
+    \Require \texttt{root}, \texttt{req}
+    \Ensure \texttt{res}
+    \State inisialisasi \texttt{res}, catat \texttt{startTime}
+    \State \texttt{queue} $\gets$ [root dengan \texttt{nodePath = "0"}]
+    \While{\texttt{queue} tidak kosong}
+    \State \texttt{current} $\gets$ pop-front dari \texttt{queue}
+    \State \texttt{matched, shouldStop} $\gets$ \textsc{processVisit}(\texttt{res, current, req})
+    \If{\texttt{shouldStop}}
+    \State \textbf{break}
+    \EndIf
+    \For{setiap \texttt{child} dari \texttt{current.node.Children} dalam urutan asli}
+    \State bentuk \texttt{childPath} dan \texttt{pathFromTop}
+    \State append item anak ke belakang \texttt{queue}
+    \EndFor
+    \EndWhile
+    \State \texttt{res.durationMs} $\gets$ selisih waktu sekarang dengan \texttt{startTime}
+    \State \Return \texttt{res}
+\end{ieeealgorithm}
+
+\begin{ieeealgorithm}{searchDFS}
+    \Require \texttt{root}, \texttt{req}
+    \Ensure \texttt{res}
+    \State inisialisasi \texttt{res}, catat \texttt{startTime}
+    \State \texttt{stack} $\gets$ [root dengan \texttt{nodePath = "0"}]
+    \While{\texttt{stack} tidak kosong}
+    \State \texttt{current} $\gets$ pop-top dari \texttt{stack}
+    \State \texttt{matched, shouldStop} $\gets$ \textsc{processVisit}(\texttt{res, current, req})
+    \If{\texttt{shouldStop}}
+    \State \textbf{break}
+    \EndIf
+    \For{indeks anak \texttt{i} dari kanan ke kiri}
+    \State bentuk \texttt{childPath} dan \texttt{pathFromTop}
+    \State push item anak ke \texttt{stack}
+    \EndFor
+    \EndWhile
+    \State \texttt{res.durationMs} $\gets$ selisih waktu sekarang dengan \texttt{startTime}
+    \State \Return \texttt{res}
+\end{ieeealgorithm}
+
+\begin{ieeealgorithm}{processVisit}
+    \Require \texttt{res}, \texttt{current}, \texttt{req}
+    \Ensure \texttt{(matched, shouldStop)}
+    \State \texttt{res.visitedCount} $\gets$ \texttt{res.visitedCount + 1}
+    \State perbarui \texttt{res.maxDepthVisited} jika depth node saat ini lebih besar
+    \State \texttt{matched} $\gets$ \textsc{Match}(\texttt{current.node}, \texttt{req.selector})
+    \If{\texttt{matched}}
+    \State bentuk \texttt{MatchHit} dan append ke \texttt{res.matches}
+    \If{\texttt{req.includePathToMatch}}
+    \State salin \texttt{pathFromTop} ke \texttt{hit.pathFromRoot}
+    \EndIf
+    \EndIf
+    \If{\texttt{req.includeTraversalLog}}
+    \State append \texttt{VisitEvent} ke \texttt{res.traversalLog}
+    \EndIf
+    \If{\texttt{req.limit > 0} \textbf{and} jumlah match $\geq$ limit}
+    \State \texttt{res.stoppedByLimit} $\gets$ \texttt{true}
+    \State \Return \texttt{(matched, true)}
+    \EndIf
+    \State \Return \texttt{(matched, false)}
+\end{ieeealgorithm}
+
+\subsection{Contoh Traversal pada Pohon DOM}
+
+Contoh berikut menggunakan struktur DOM yang sama dengan section Selector agar perbandingan BFS dan DFS mudah diamati.
+
+\begin{tcblisting}{
+        breakable,
+        colback=gray!3,
+        colframe=black!60,
+        title=Input HTML,
+        listing only,
+        left=1mm,
+        right=1mm,
+        top=1mm,
+        bottom=1mm
+    }
+    <html>
+    <body>
+    <section id="news">
+    <article class="card">Alpha</article>
+    <article class="card featured">
+    <p class="lead">Intro</p>
+    </article>
+    <p>Outside</p>
+    </section>
+    </body>
+    </html>
+\end{tcblisting}
+
+\subsubsection{Pohon DOM Awal}
+
+\begin{figure}[H]
+    \centering
+    \begin{forest}
+        for tree={
+        draw,
+        rounded corners,
+        align=center,
+        parent anchor=south,
+        child anchor=north,
+        l sep=10mm,
+        s sep=7mm,
+        font=\small
+        }
+        [html\\depth 0
+            [body\\depth 1
+                    [section\#news\\depth 2
+                            [article.card\\depth 3\\text Alpha]
+                            [article.card.featured\\depth 3
+                                    [p.lead\\depth 4\\text Intro]
+                            ]
+                            [p\\depth 3\\text Outside]
+                    ]
+            ]
+        ]
+    \end{forest}
+    \caption{Pohon DOM hasil parsing}
+\end{figure}
+
+\subsubsection{Hasil Eksplorasi BFS}
+
+Untuk selector \texttt{p}, urutan kunjungan BFS pada pohon di atas adalah
+\texttt{html} $\rightarrow$ \texttt{body} $\rightarrow$ \texttt{section} $\rightarrow$ \texttt{article(Alpha)} $\rightarrow$ \texttt{article(featured)} $\rightarrow$ \texttt{p(Outside)} $\rightarrow$ \texttt{p(Intro)}.
+
+\begin{figure}[H]
+    \centering
+    \begin{forest}
+        for tree={
+        draw,
+        rounded corners,
+        align=center,
+        parent anchor=south,
+        child anchor=north,
+        l sep=10mm,
+        s sep=7mm,
+        font=\small
+        }
+        [html\\(1)\\depth 0
+            [body\\(2)\\depth 1
+                    [section\\(3)\\depth 2
+                            [article Alpha\\(4)\\depth 3]
+                            [article featured\\(5)\\depth 3
+                                    [p Intro\\(7)\\depth 4]
+                            ]
+                            [p Outside\\(6)\\depth 3]
+                    ]
+            ]
+        ]
+    \end{forest}
+    \caption{Pohon DOM dengan nomor urut eksplorasi BFS}
+\end{figure}
+
+\subsubsection{Hasil Eksplorasi DFS}
+
+Untuk selector \texttt{p}, urutan kunjungan DFS (pre-order, left-to-right sesuai implementasi) adalah:
+\texttt{html} $\rightarrow$ \texttt{body} $\rightarrow$ \texttt{section} $\rightarrow$ \texttt{article(Alpha)} $\rightarrow$ \texttt{article(featured)} $\rightarrow$ \texttt{p(Intro)} $\rightarrow$ \texttt{p(Outside)}.
+
+\begin{figure}[H]
+    \centering
+    \begin{forest}
+        for tree={
+        draw,
+        rounded corners,
+        align=center,
+        parent anchor=south,
+        child anchor=north,
+        l sep=10mm,
+        s sep=7mm,
+        font=\small
+        }
+        [html\\(1)\\depth 0
+            [body\\(2)\\depth 1
+                    [section\\(3)\\depth 2
+                            [article Alpha\\(4)\\depth 3]
+                            [article featured\\(5)\\depth 3
+                                    [p Intro\\(6)\\depth 4]
+                            ]
+                            [p Outside\\(7)\\depth 3]
+                    ]
+            ]
+        ]
+    \end{forest}
+    \caption{Pohon DOM dengan nomor urut eksplorasi DFS}
+\end{figure}
+
+Hasil akhir match selector \texttt{p} pada kedua algoritma tetap sama secara himpunan, yaitu dua node \texttt{p}. Perbedaannya berada pada urutan ditemukan, isi traversal log, dan potensi waktu berhenti jika \texttt{limit} diaktifkan. Contohnya, jika \texttt{limit = 1}, BFS pada pohon ini akan berhenti saat menemukan \texttt{p(Outside)}, sedangkan DFS berhenti saat menemukan \texttt{p(Intro)}.
+
