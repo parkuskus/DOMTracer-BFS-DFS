@@ -1,0 +1,11 @@
+    <html>
+    <body>
+    <section id="news">
+    <article class="card">Alpha</article>
+    <article class="card featured">
+    <p class="lead">Intro</p>
+    </article>
+    <p>Outside</p>
+    </section>
+    </body>
+    </html>

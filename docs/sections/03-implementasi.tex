@@ -1,0 +1,540 @@
+\section{Pendekatan Umum}
+
+Pendekatan utama pada aplikasi ini berfokus pada dua strategi traversal pohon DOM, yaitu Breadth-First Search (BFS) dan Depth-First Search (DFS). Sebelum traversal dijalankan, masukan HTML terlebih dahulu diparse menjadi pohon DOM agar setiap elemen memiliki relasi parent-child yang jelas. Setelah struktur pohon terbentuk, selector CSS dipakai sebagai filter untuk menentukan node mana yang dianggap cocok selama proses penelusuran.
+
+Pada BFS, penelusuran dilakukan per level menggunakan queue (FIFO), sehingga node yang lebih dekat ke akar diproses lebih dahulu. Karakter ini membuat BFS cocok ketika tujuan utama adalah menemukan elemen yang berada pada kedalaman dangkal atau ketika urutan hasil berdasarkan level lebih diutamakan. Selama traversal, setiap node yang dikunjungi tetap dievaluasi terhadap selector, sehingga hasil tidak hanya bergantung pada urutan kunjungan, tetapi juga pada kecocokan kriterianya.
+
+Pada DFS, penelusuran dilakukan sedalam mungkin pada satu cabang menggunakan stack (LIFO), lalu melakukan backtrack ke cabang lain. Pendekatan ini cocok untuk eksplorasi struktur yang dalam karena sistem segera masuk ke subtree sebelum berpindah ke sibling berikutnya. Seperti pada BFS, selector tetap dievaluasi di setiap langkah agar hanya node yang memenuhi kriteria yang dicatat sebagai match.
+
+Perbedaan paling mencolok dari BFS dan DFS pada implementasi ini terletak pada urutan kunjungan node, jejak traversal, serta kemungkinan waktu tercapainya limit hasil. Meskipun urutan temuan dapat berbeda, keduanya menggunakan aturan selector yang sama dan menghasilkan keluaran dalam format metrik yang sama, seperti jumlah node dikunjungi, kedalaman maksimum, dan durasi eksekusi.
+
+\section{Parsing}
+
+Parsing pada program ini bertujuan mengubah dokumen HTML mentah menjadi representasi pohon DOM yang dapat ditelusuri oleh BFS maupun DFS. Tahap ini menjadi fondasi karena kualitas hasil traversal sangat bergantung pada ketepatan struktur parent-child yang dibentuk saat parsing. Implementasi di backend menggunakan tokenizer HTML berbasis stream dari pustaka \texttt{golang.org/x/net/html}, sehingga dokumen dibaca token per token tanpa perlu membangun representasi string antara yang besar di memori.
+
+Pendekatan yang dipakai adalah kombinasi \textit{token stream processing} dan \textit{stack-based tree construction}. Program membuat node akar semu \texttt{document} dengan kedalaman \texttt{-1}, lalu memelihara stack elemen aktif untuk menentukan parent dari token yang sedang diproses. Ketika menemukan \texttt{StartTagToken}, parser membuat node baru, menyalin atribut dari tokenizer, menautkan node tersebut ke parent pada puncak stack, dan mendorongnya ke stack jika tag bukan \textit{self-closing}. Ketika menemukan \texttt{TextToken}, isi teks dibersihkan dengan \texttt{TrimSpace}. Jika tidak kosong, teks disimpan pada node yang sedang aktif. Ketika menemukan \texttt{EndTagToken}, stack dipop sampai tag yang sesuai ditemukan sehingga parser tetap toleran terhadap struktur penutup yang tidak rapi. Untuk \texttt{SelfClosingTagToken}, node tetap dibuat dan ditautkan ke parent, tetapi tidak didorong ke stack. Saat \texttt{ErrorToken} mencapai \texttt{EOF}, parser mengembalikan elemen akar HTML pertama sebagai root hasil parsing.
+
+\subsection{Pseudocode Algoritma Parsing}
+
+\begin{ieeealgorithm}{ParseHTML}
+    \Require \texttt{rawHTML} berupa string HTML
+    \Ensure \texttt{rootNode} atau \texttt{error}
+    \State \texttt{tokenizer} $\gets$ \textsc{NewHTMLTokenizer}(\texttt{rawHTML})
+    \State \texttt{sentinel} $\gets$ Node(tag = \texttt{"document"}, depth = $-1$)
+    \State \texttt{stack} $\gets$ [\texttt{sentinel}]
+    \While{true}
+    \State \texttt{tokenType} $\gets$ \texttt{tokenizer.Next()}
+    \If{\texttt{tokenType} = ErrorToken}
+    \If{\texttt{tokenizer.Err()} = EOF}
+    \If{\texttt{sentinel.children} tidak kosong}
+    \State \Return \texttt{sentinel.children[0]}
+    \Else
+    \State \Return \texttt{error("empty document")}
+    \EndIf
+    \EndIf
+    \ElsIf{\texttt{tokenType} = StartTagToken}
+    \State \texttt{tag, hasAttr} $\gets$ \texttt{tokenizer.TagName()}
+    \State \texttt{attrs} $\gets$ \textsc{ExtractAttributes}(\texttt{tokenizer}, \texttt{hasAttr})
+    \State \texttt{parent} $\gets$ \texttt{top(stack)}
+    \State \texttt{node} $\gets$ Node(tag = \texttt{tag}, attrs = \texttt{attrs}, parent = \texttt{parent}, depth = $|stack|-1$)
+    \State tambahkan \texttt{node} ke \texttt{parent.children}
+    \If{\texttt{tag} bukan anggota \texttt{SelfClosingTagSet}}
+    \State \texttt{push(stack, node)}
+    \EndIf
+    \ElsIf{\texttt{tokenType} = TextToken}
+    \State \texttt{txt} $\gets$ \textsc{TrimSpace}(\texttt{tokenizer.Text()})
+    \If{\texttt{txt} $\neq$ \texttt{""}}
+    \State \texttt{top(stack).text} $\gets$ \texttt{txt}
+    \EndIf
+    \ElsIf{\texttt{tokenType} = EndTagToken}
+    \State \texttt{closingTag} $\gets$ \texttt{tokenizer.TagName()}
+    \While{$|stack| > 1$}
+    \State \texttt{topNode} $\gets$ \texttt{pop(stack)}
+    \If{\texttt{topNode.tag} = \texttt{closingTag}}
+    \State \textbf{break}
+    \EndIf
+    \EndWhile
+    \ElsIf{\texttt{tokenType} = SelfClosingTagToken}
+    \State \texttt{tag, hasAttr} $\gets$ \texttt{tokenizer.TagName()}
+    \State \texttt{attrs} $\gets$ \textsc{ExtractAttributes}(\texttt{tokenizer}, \texttt{hasAttr})
+    \State \texttt{parent} $\gets$ \texttt{top(stack)}
+    \State \texttt{node} $\gets$ Node(tag = \texttt{tag}, attrs = \texttt{attrs}, parent = \texttt{parent}, depth = $|stack|-1$)
+    \State tambahkan \texttt{node} ke \texttt{parent.children}
+    \EndIf
+    \EndWhile
+\end{ieeealgorithm}
+
+\begin{ieeealgorithm}{ExtractAttributes}
+    \Require \texttt{tokenizer}, \texttt{hasAttr}
+    \Ensure \texttt{attrs} berupa map key-value atribut
+    \State \texttt{attrs} $\gets$ map kosong
+    \If{\texttt{hasAttr} = false}
+    \State \Return \texttt{attrs}
+    \EndIf
+    \Repeat
+    \State \texttt{key, value, more} $\gets$ \texttt{tokenizer.TagAttr()}
+    \State \texttt{attrs[key]} $\gets$ \texttt{value}
+    \Until{\texttt{more} = false}
+    \State \Return \texttt{attrs}
+\end{ieeealgorithm}
+
+\subsection{Jenis File HTML yang Dapat Dimasukkan}
+
+Program menerima masukan HTML dari tiga sumber, yaitu URL (melalui HTTP GET), berkas lokal, dan string HTML manual. Untuk berkas lokal, ekstensi yang umum seperti \texttt{.html} dan \texttt{.htm} dapat diproses selama kontennya valid sebagai dokumen HTML teks. Karena parsing menggunakan tokenizer HTML5 yang toleran, dokumen dengan struktur tidak sepenuhnya rapi seperti tag yang tidak tertutup sempurna tetap dapat diparse dalam banyak kasus. Implementasi juga mendukung elemen \textit{void/self-closing} populer seperti \texttt{img}, \texttt{br}, \texttt{hr}, \texttt{input}, \texttt{meta}, \texttt{link}, dan sejenisnya. Sebaliknya, parser ini tidak menargetkan semantik XML ketat atau kebutuhan namespace khusus, sehingga fokusnya tetap pada HTML web umum untuk kebutuhan traversal selector.
+
+\subsection{Contoh Masukan dan Keluaran Parsing}
+
+Contoh pertama memperlihatkan masukan sederhana dengan elemen bertingkat dan atribut. Setelah diparse, keluaran berupa node root \texttt{html} beserta subtree lengkapnya.
+
+\begin{tcblisting}{
+        breakable,
+        colback=gray!3,
+        colframe=black!60,
+        title=Contoh 1: Input dan Output Parsing,
+        listing only,
+        left=1mm,
+        right=1mm,
+        top=1mm,
+        bottom=1mm
+    }
+    // INPUT HTML
+    <html>
+    <body id="main">
+    <section class="catalog">
+    <article class="item featured">Alpha</article>
+    <article class="item">Beta</article>
+    </section>
+    </body>
+    </html>
+
+
+    // OUTPUT
+    {
+    "tag": "html",
+    "depth": 0,
+    "children": [
+    {
+    "tag": "body",
+    "attributes": {"id": "main"},
+    "depth": 1,
+    "children": [
+    {
+    "tag": "section",
+    "attributes": {"class": "catalog"},
+    "depth": 2,
+    "children": [
+    {
+    "tag": "article",
+    "attributes": {"class": "item featured"},
+    "text": "Alpha",
+    "depth": 3
+    },
+    {
+    "tag": "article",
+    "attributes": {"class": "item"},
+    "text": "Beta",
+    "depth": 3
+    }
+    ]
+    }
+    ]
+    }
+    ]
+    }
+\end{tcblisting}
+
+Contoh kedua menekankan penanganan elemen \textit{self-closing}. Elemen \texttt{img} tetap masuk sebagai node anak, tetapi tidak mengubah stack kedalaman karena tidak memiliki pasangan \texttt{EndTag}.
+
+\begin{tcblisting}{
+        breakable,
+        colback=gray!3,
+        colframe=black!60,
+        title=Contoh 2: Self-Closing Tag,
+        listing only,
+        left=1mm,
+        right=1mm,
+        top=1mm,
+        bottom=1mm
+    }
+    // INPUT HTML
+    <html>
+    <body>
+    <div>
+    <img class="hero" />
+    <p id="lead">Intro</p>
+    </div>
+    </body>
+    </html>
+
+    // OUTPUT
+    html(depth=0)
+    body(depth=1)
+    div(depth=2)
+    img[class="hero"](depth=3)
+    p[id="lead"] text="Intro" (depth=3)
+\end{tcblisting}
+
+Dengan pendekatan ini, hasil parsing konsisten untuk dipakai pada tahap selector matching dan traversal BFS/DFS, karena struktur pohon, atribut, teks, dan kedalaman node sudah tersedia secara eksplisit sejak awal proses.
+
+\section{Selector}
+
+Modul selector bertanggung jawab untuk menentukan apakah sebuah node DOM cocok dengan pola CSS selector yang dimasukkan pengguna. Secara implementasi, proses seleksi dibagi menjadi dua lapisan. Lapisan pertama adalah \texttt{MatchSelector}, yaitu pencocokan selector sederhana pada satu node. Lapisan kedua adalah \texttt{Match}, yaitu evaluasi selector yang melibatkan relasi antarnode seperti parent-child atau sibling. Pemisahan ini membuat proses lebih terstruktur karena pengecekan atribut node dan pengecekan relasi pohon tidak tercampur pada satu fungsi.
+
+Pada awal proses, selector dinormalisasi dengan menambahkan spasi di sekitar operator \texttt{>}, \texttt{+}, dan \texttt{\textasciitilde{}}, lalu multiple space diringkas menjadi satu spasi. Tujuannya agar bentuk input seperti \texttt{div>p}, \texttt{div > p}, atau \texttt{div   >    p} tetap diperlakukan sama. Setelah normalisasi, modul melakukan pencarian combinator dan mengevaluasi selector secara rekursif dari sisi kanan ke kiri agar node saat ini selalu diuji pada bagian selector yang paling dekat dengan dirinya.
+
+\subsection{Selector Legal dan Tidak Legal}
+
+Selector yang legal adalah selector yang benar-benar didukung oleh implementasi fungsi \texttt{MatchSelector} dan \texttt{Match}. Pada implementasi, selector sederhana yang legal mencakup tag selector, class selector tunggal, id selector tunggal, dan universal selector. Selain itu, selector relasional dengan combinator \texttt{space} (descendant), \texttt{>} (child), \texttt{+} (adjacent sibling), dan \texttt{\textasciitilde{}} (general sibling) juga legal selama setiap operand kiri dan kanannya berupa selector sederhana yang didukung.
+
+\begin{tcblisting}{
+        breakable,
+        colback=gray!3,
+        colframe=black!60,
+        title=Contoh Selector Legal,
+        listing only,
+        left=1mm,
+        right=1mm,
+        top=1mm,
+        bottom=1mm
+    }
+    tag selector: article, p, div
+    class selector: .card, .featured
+    id selector: #main, #news
+    universal selector: *
+    descendant combinator: section article
+    child combinator: section > article
+    adjacent sibling: article + p
+    general sibling: article ~ p
+\end{tcblisting}
+
+Selector tidak legal adalah selector CSS yang tidak memiliki dukungan eksplisit dalam kode. Jika selector seperti ini diberikan, sistem tidak melakukan parsing tingkat lanjut, melainkan mencoba mencocokkan string apa adanya pada jalur fallback, sehingga umumnya menghasilkan tidak ada match.
+
+\begin{tcblisting}{
+        breakable,
+        colback=gray!3,
+        colframe=black!60,
+        title=Contoh Selector Tidak Legal (Tidak Didukung),
+        listing only,
+        left=1mm,
+        right=1mm,
+        top=1mm,
+        bottom=1mm
+    }
+    selector gabungan satu token: article.card, div#main
+    attribute selector: [class="card"], [id]
+    pseudo-class: p:first-child, li:nth-child(2)
+    pseudo-element: p::before
+    selector list: article, p
+    namespace selector: svg|rect
+\end{tcblisting}
+
+\subsection{Pemrosesan Tiap Selector}
+
+Pemrosesan tag selector dilakukan dengan membandingkan langsung \texttt{node.Tag} terhadap string selector. Pemrosesan class selector dilakukan ketika token diawali titik; nilai atribut \texttt{class} dipecah berdasarkan spasi, lalu diperiksa apakah nama class target muncul sebagai token utuh. Pemrosesan id selector dilakukan ketika token diawali tanda pagar dan dibandingkan langsung dengan atribut \texttt{id}. Universal selector \texttt{*} selalu bernilai benar untuk node apa pun.
+
+Untuk combinator, pemrosesan dilakukan pada fungsi \texttt{Match}. Combinator \texttt{>} memeriksa apakah node saat ini cocok dengan operand kanan dan parent langsungnya cocok dengan operand kiri. Combinator \texttt{+} memeriksa sibling elemen sebelumnya yang tepat satu posisi sebelum node. Combinator \texttt{\textasciitilde{}} memeriksa apakah ada sibling sebelumnya yang cocok. Adapun combinator spasi memeriksa apakah ada ancestor mana pun yang cocok dengan selector sisi kiri. Dengan pendekatan ini, selector relasional dapat dievaluasi secara rekursif terhadap struktur DOM yang sudah dibentuk pada tahap parsing.
+
+\begin{ieeealgorithm}{MatchSelector}
+    \Require \texttt{node}, \texttt{selector}
+    \Ensure nilai boolean cocok/tidak cocok
+    \If{\texttt{selector} = \texttt{"*"}}
+    \State \Return \texttt{true}
+    \EndIf
+    \If{\texttt{selector} diawali \texttt{"\#"}}
+    \State \Return \texttt{node.attributes["id"] = selector[1:]}
+    \EndIf
+    \If{\texttt{selector} diawali \texttt{"."}}
+    \State \texttt{classes} $\gets$ split spasi dari \texttt{node.attributes["class"]}
+    \State \Return \texttt{selector[1:]} ada di \texttt{classes}
+    \EndIf
+    \State \Return \texttt{node.tag = selector}
+\end{ieeealgorithm}
+
+\begin{ieeealgorithm}{Match}
+    \Require \texttt{node}, \texttt{selector}
+    \Ensure nilai boolean cocok/tidak cocok
+    \State normalisasi spasi dan operator pada \texttt{selector}
+    \If{ada operator \texttt{" > "} pada \texttt{selector}}
+    \State pecah menjadi \texttt{left} dan \texttt{right}
+    \State \Return \texttt{MatchSelector(node, right)}
+    \Statex \hspace{2.05em} \texttt{AND node.parent != nil AND Match(node.parent, left)}
+    \EndIf
+    \If{ada operator \texttt{" + "} pada \texttt{selector}}
+    \State pecah menjadi \texttt{left} dan \texttt{right}
+    \If{\texttt{MatchSelector(node, right)} = false}
+    \State \Return \texttt{false}
+    \EndIf
+    \State \texttt{prev} $\gets$ sibling elemen tepat sebelum \texttt{node}
+    \State \Return \texttt{prev != nil AND Match(prev, left)}
+    \EndIf
+    \If{ada operator \texttt{" \textasciitilde{} "} pada \texttt{selector}}
+    \State pecah menjadi \texttt{left} dan \texttt{right}
+    \If{\texttt{MatchSelector(node, right)} = false}
+    \State \Return \texttt{false}
+    \EndIf
+    \State \Return ada sibling sebelumnya yang memenuhi \texttt{Match(sibling, left)}
+    \EndIf
+    \If{selector mengandung spasi tanpa operator lain}
+    \State pecah jadi \texttt{left} (ancestor pattern) dan \texttt{right} (node pattern)
+    \If{\texttt{MatchSelector(node, right)} = false}
+    \State \Return \texttt{false}
+    \EndIf
+    \State \Return ada ancestor yang memenuhi \texttt{Match(ancestor, left)}
+    \EndIf
+    \State \Return \texttt{MatchSelector(node, selector)}
+\end{ieeealgorithm}
+
+\subsection{Contoh Penggunaan Selector pada File HTML}
+
+Contoh berikut memperlihatkan satu file HTML sederhana dan beberapa selector legal beserta hasil yang didapatkan.
+
+\begin{tcblisting}{
+        breakable,
+        colback=gray!3,
+        colframe=black!60,
+        title=File HTML Contoh,
+        listing only,
+        left=1mm,
+        right=1mm,
+        top=1mm,
+        bottom=1mm
+    }
+    <html>
+    <body>
+    <section id="news">
+    <article class="card">Alpha</article>
+    <article class="card featured">
+    <p class="lead">Intro</p>
+    </article>
+    <p>Outside</p>
+    </section>
+    </body>
+    </html>
+\end{tcblisting}
+
+Pada file tersebut, selector \texttt{article} menghasilkan dua node karena ada dua elemen \texttt{article}. Selector \texttt{.card} juga menghasilkan dua node karena kedua \texttt{article} memiliki class \texttt{card}. Selector \texttt{\#news} hanya menghasilkan satu node, yaitu elemen \texttt{section} yang memiliki id tersebut. Selector relasional \texttt{section > article} menghasilkan dua node karena kedua \texttt{article} adalah child langsung dari \texttt{section}. Selector \texttt{section article} juga menghasilkan dua node, tetapi mekanisme pencariannya berbasis relasi ancestor-descendant. Selector \texttt{article > p} menghasilkan satu node, yaitu \texttt{p} dengan class \texttt{lead}, sedangkan selector \texttt{article + p} dan \texttt{article \textasciitilde{} p} sama-sama menghasilkan satu node \texttt{p} terakhir karena node tersebut berada sesudah elemen \texttt{article} sebagai sibling pada parent yang sama.
+
+Sebagai pembanding, jika pada file yang sama digunakan selector tidak legal seperti \texttt{article.card} atau \texttt{p:first-child}, implementasi saat ini tidak memiliki parser khusus untuk bentuk tersebut sehingga hasilnya cenderung kosong. Oleh karena itu, untuk memperoleh hasil yang konsisten, pengguna harus menyusun query menggunakan bentuk selector yang memang didukung oleh modul selector.
+
+\section{Traversal}
+
+Traversal adalah tahap pencarian node pada pohon DOM yang sudah dihasilkan parser. Pada implementasi ini, traversal bekerja di atas struktur \texttt{Node} yang menyimpan relasi parent-child, lalu mengunjungi node satu per satu sambil menjalankan selector matching. Program mendukung dua strategi, yaitu Breadth-First Search (BFS) dan Depth-First Search (DFS), dengan antarmuka yang sama melalui fungsi \texttt{SearchDOM}. Perbedaan keduanya bukan pada kriteria selector, tetapi pada urutan node yang dikunjungi.
+
+Pada BFS, node dieksplorasi per level memakai queue (FIFO). Node root dikunjungi lebih dulu, lalu semua anak level berikutnya, dan seterusnya. Strategi ini cocok ketika elemen target cenderung berada di kedalaman yang dangkal. Pada DFS, node dieksplorasi sedalam mungkin di satu cabang memakai stack (LIFO), baru kemudian backtrack ke cabang lain. Pada kode program, urutan sibling kiri-ke-kanan tetap dipertahankan dengan mendorong anak ke stack dari kanan ke kiri.
+
+Selain urutan eksplorasi, traversal juga menangani metrik dan kondisi berhenti dini. Setiap kunjungan menaikkan \texttt{VisitedCount}, memperbarui \texttt{MaxDepthVisited}, lalu memanggil \texttt{selector.Match}. Jika cocok, node disimpan ke \texttt{Matches} dengan metadata seperti \texttt{nodePath}, \texttt{depth}, dan \texttt{visitStep}. Jika \texttt{IncludeTraversalLog} aktif, event kunjungan juga dicatat. Ketika \texttt{Limit > 0} dan jumlah match telah mencapai limit, traversal berhenti lebih awal dengan \texttt{StoppedByLimit = true}.
+
+\subsection{Pseudocode BFS dan DFS}
+
+\begin{ieeealgorithm}{SearchDOM}
+    \Require \texttt{root}, \texttt{req} berisi selector, algorithm, limit, opsi log
+    \Ensure \texttt{SearchResult} atau \texttt{error}
+    \If{\texttt{root = nil}}
+    \State \Return \texttt{error("root cannot be nil")}
+    \EndIf
+    \If{selector kosong}
+    \State \Return \texttt{error("selector cannot be empty")}
+    \EndIf
+    \State \texttt{algo} $\gets$ uppercase(trim(\texttt{req.algorithm}))
+    \If{\texttt{algo} kosong}
+    \State \texttt{algo} $\gets$ \texttt{BFS}
+    \EndIf
+    \If{\texttt{algo = BFS}}
+    \State \texttt{res} $\gets$ \textsc{searchBFS}(\texttt{root}, \texttt{req})
+    \ElsIf{\texttt{algo = DFS}}
+    \State \texttt{res} $\gets$ \textsc{searchDFS}(\texttt{root}, \texttt{req})
+    \Else
+    \State \Return \texttt{error("unsupported algorithm")}
+    \EndIf
+    \State isi \texttt{res.algorithmUsed} dan \texttt{res.selectorUsed}
+    \State \Return \texttt{res}
+\end{ieeealgorithm}
+
+\begin{ieeealgorithm}{searchBFS}
+    \Require \texttt{root}, \texttt{req}
+    \Ensure \texttt{res}
+    \State inisialisasi \texttt{res}, catat \texttt{startTime}
+    \State \texttt{queue} $\gets$ [root dengan \texttt{nodePath = "0"}]
+    \While{\texttt{queue} tidak kosong}
+    \State \texttt{current} $\gets$ pop-front dari \texttt{queue}
+    \State \texttt{matched, shouldStop} $\gets$ \textsc{processVisit}(\texttt{res, current, req})
+    \If{\texttt{shouldStop}}
+    \State \textbf{break}
+    \EndIf
+    \For{setiap \texttt{child} dari \texttt{current.node.Children} dalam urutan asli}
+    \State bentuk \texttt{childPath} dan \texttt{pathFromTop}
+    \State append item anak ke belakang \texttt{queue}
+    \EndFor
+    \EndWhile
+    \State \texttt{res.durationMs} $\gets$ selisih waktu sekarang dengan \texttt{startTime}
+    \State \Return \texttt{res}
+\end{ieeealgorithm}
+
+\begin{ieeealgorithm}{searchDFS}
+    \Require \texttt{root}, \texttt{req}
+    \Ensure \texttt{res}
+    \State inisialisasi \texttt{res}, catat \texttt{startTime}
+    \State \texttt{stack} $\gets$ [root dengan \texttt{nodePath = "0"}]
+    \While{\texttt{stack} tidak kosong}
+    \State \texttt{current} $\gets$ pop-top dari \texttt{stack}
+    \State \texttt{matched, shouldStop} $\gets$ \textsc{processVisit}(\texttt{res, current, req})
+    \If{\texttt{shouldStop}}
+    \State \textbf{break}
+    \EndIf
+    \For{indeks anak \texttt{i} dari kanan ke kiri}
+    \State bentuk \texttt{childPath} dan \texttt{pathFromTop}
+    \State push item anak ke \texttt{stack}
+    \EndFor
+    \EndWhile
+    \State \texttt{res.durationMs} $\gets$ selisih waktu sekarang dengan \texttt{startTime}
+    \State \Return \texttt{res}
+\end{ieeealgorithm}
+
+\begin{ieeealgorithm}{processVisit}
+    \Require \texttt{res}, \texttt{current}, \texttt{req}
+    \Ensure \texttt{(matched, shouldStop)}
+    \State \texttt{res.visitedCount} $\gets$ \texttt{res.visitedCount + 1}
+    \State perbarui \texttt{res.maxDepthVisited} jika depth node saat ini lebih besar
+    \State \texttt{matched} $\gets$ \textsc{Match}(\texttt{current.node}, \texttt{req.selector})
+    \If{\texttt{matched}}
+    \State bentuk \texttt{MatchHit} dan append ke \texttt{res.matches}
+    \If{\texttt{req.includePathToMatch}}
+    \State salin \texttt{pathFromTop} ke \texttt{hit.pathFromRoot}
+    \EndIf
+    \EndIf
+    \If{\texttt{req.includeTraversalLog}}
+    \State append \texttt{VisitEvent} ke \texttt{res.traversalLog}
+    \EndIf
+    \If{\texttt{req.limit > 0} \textbf{and} jumlah match $\geq$ limit}
+    \State \texttt{res.stoppedByLimit} $\gets$ \texttt{true}
+    \State \Return \texttt{(matched, true)}
+    \EndIf
+    \State \Return \texttt{(matched, false)}
+\end{ieeealgorithm}
+
+\subsection{Contoh Traversal pada Pohon DOM}
+
+Contoh berikut menggunakan struktur DOM yang sama dengan section Selector agar perbandingan BFS dan DFS mudah diamati.
+
+\begin{tcblisting}{
+        breakable,
+        colback=gray!3,
+        colframe=black!60,
+        title=Input HTML,
+        listing only,
+        left=1mm,
+        right=1mm,
+        top=1mm,
+        bottom=1mm
+    }
+    <html>
+    <body>
+    <section id="news">
+    <article class="card">Alpha</article>
+    <article class="card featured">
+    <p class="lead">Intro</p>
+    </article>
+    <p>Outside</p>
+    </section>
+    </body>
+    </html>
+\end{tcblisting}
+
+\subsubsection{Pohon DOM Awal}
+
+\begin{figure}[H]
+    \centering
+    \begin{forest}
+        for tree={
+        draw,
+        rounded corners,
+        align=center,
+        parent anchor=south,
+        child anchor=north,
+        l sep=10mm,
+        s sep=7mm,
+        font=\small
+        }
+        [html\\depth 0
+            [body\\depth 1
+                    [section\#news\\depth 2
+                            [article.card\\depth 3\\text Alpha]
+                            [article.card.featured\\depth 3
+                                    [p.lead\\depth 4\\text Intro]
+                            ]
+                            [p\\depth 3\\text Outside]
+                    ]
+            ]
+        ]
+    \end{forest}
+    \caption{Pohon DOM hasil parsing}
+\end{figure}
+
+\subsubsection{Hasil Eksplorasi BFS}
+
+Untuk selector \texttt{p}, urutan kunjungan BFS pada pohon di atas adalah
+\texttt{html} $\rightarrow$ \texttt{body} $\rightarrow$ \texttt{section} $\rightarrow$ \texttt{article(Alpha)} $\rightarrow$ \texttt{article(featured)} $\rightarrow$ \texttt{p(Outside)} $\rightarrow$ \texttt{p(Intro)}.
+
+\begin{figure}[H]
+    \centering
+    \begin{forest}
+        for tree={
+        draw,
+        rounded corners,
+        align=center,
+        parent anchor=south,
+        child anchor=north,
+        l sep=10mm,
+        s sep=7mm,
+        font=\small
+        }
+        [html\\(1)\\depth 0
+            [body\\(2)\\depth 1
+                    [section\\(3)\\depth 2
+                            [article Alpha\\(4)\\depth 3]
+                            [article featured\\(5)\\depth 3
+                                    [p Intro\\(6)\\depth 4]
+                            ]
+                            [p Outside\\(7)\\depth 3]
+                    ]
+            ]
+        ]
+    \end{forest}
+    \caption{Pohon DOM dengan nomor urut eksplorasi BFS}
+\end{figure}
+
+\subsubsection{Hasil Eksplorasi DFS}
+
+Untuk selector \texttt{p}, urutan kunjungan DFS (pre-order, left-to-right sesuai implementasi) adalah
+\texttt{html} $\rightarrow$ \texttt{body} $\rightarrow$ \texttt{section} $\rightarrow$ \texttt{article(Alpha)} $\rightarrow$ \texttt{article(featured)} $\rightarrow$ \texttt{p(Intro)} $\rightarrow$ \texttt{p(Outside)}.
+
+\begin{figure}[H]
+    \centering
+    \begin{forest}
+        for tree={
+        draw,
+        rounded corners,
+        align=center,
+        parent anchor=south,
+        child anchor=north,
+        l sep=10mm,
+        s sep=7mm,
+        font=\small
+        }
+        [html\\(1)\\depth 0
+            [body\\(2)\\depth 1
+                    [section\\(3)\\depth 2
+                            [article Alpha\\(4)\\depth 3]
+                            [article featured\\(5)\\depth 3
+                                    [p Intro\\(6)\\depth 4]
+                            ]
+                            [p Outside\\(7)\\depth 3]
+                    ]
+            ]
+        ]
+    \end{forest}
+    \caption{Pohon DOM dengan nomor urut eksplorasi DFS}
+\end{figure}
+
+Hasil akhir match selector \texttt{p} pada kedua algoritma tetap sama secara himpunan, yaitu dua node \texttt{p}. Perbedaannya berada pada urutan ditemukan, isi traversal log, dan potensi waktu berhenti jika \texttt{limit} diaktifkan. Contohnya, jika \texttt{limit = 1}, BFS pada pohon ini akan berhenti saat menemukan \texttt{p(Outside)}, sedangkan DFS berhenti saat menemukan \texttt{p(Intro)}.
+
