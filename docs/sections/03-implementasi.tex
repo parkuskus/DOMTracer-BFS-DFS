@@ -6,7 +6,7 @@ Pada BFS, penelusuran dilakukan per level menggunakan queue (FIFO), sehingga nod
 
 Pada DFS, penelusuran dilakukan sedalam mungkin pada satu cabang menggunakan stack (LIFO), lalu melakukan backtrack ke cabang lain. Pendekatan ini cocok untuk eksplorasi struktur yang dalam karena sistem segera masuk ke subtree sebelum berpindah ke sibling berikutnya. Seperti pada BFS, selector tetap dievaluasi di setiap langkah agar hanya node yang memenuhi kriteria yang dicatat sebagai match.
 
-Perbedaan inti BFS dan DFS pada implementasi ini terletak pada urutan kunjungan node, jejak traversal, serta kemungkinan waktu tercapainya limit hasil. Meskipun urutan temuan dapat berbeda, keduanya menggunakan aturan selector yang sama dan menghasilkan keluaran dalam f  ormat metrik yang sama, seperti jumlah node dikunjungi, kedalaman maksimum, dan durasi eksekusi.
+Perbedaan inti BFS dan DFS pada implementasi ini terletak pada urutan kunjungan node, jejak traversal, serta kemungkinan waktu tercapainya limit hasil. Meskipun urutan temuan dapat berbeda, keduanya menggunakan aturan selector yang sama dan menghasilkan keluaran dalam format metrik yang sama, seperti jumlah node dikunjungi, kedalaman maksimum, dan durasi eksekusi.
 
 \section{Parsing}
 
@@ -174,4 +174,144 @@ Contoh kedua menekankan penanganan elemen \textit{self-closing}. Elemen \texttt{
 \end{tcblisting}
 
 Dengan pendekatan ini, hasil parsing konsisten untuk dipakai pada tahap selector matching dan traversal BFS/DFS, karena struktur pohon, atribut, teks, dan kedalaman node sudah tersedia secara eksplisit sejak awal proses.
+
+\section{Selector}
+
+Modul selector bertanggung jawab untuk menentukan apakah sebuah node DOM cocok dengan pola CSS selector yang dimasukkan pengguna. Secara implementasi, proses seleksi dibagi menjadi dua lapisan. Lapisan pertama adalah \texttt{MatchSelector}, yaitu pencocokan selector sederhana pada satu node. Lapisan kedua adalah \texttt{Match}, yaitu evaluasi selector yang melibatkan relasi antarnode seperti parent-child atau sibling. Pemisahan ini membuat proses lebih terstruktur karena pengecekan atribut node dan pengecekan relasi pohon tidak tercampur pada satu fungsi.
+
+Pada awal proses, selector dinormalisasi dengan menambahkan spasi di sekitar operator \texttt{>}, \texttt{+}, dan \texttt{\textasciitilde{}}, lalu multiple space diringkas menjadi satu spasi. Tujuannya agar bentuk input seperti \texttt{div>p}, \texttt{div > p}, atau \texttt{div   >    p} tetap diperlakukan sama. Setelah normalisasi, modul melakukan pencarian combinator dan mengevaluasi selector secara rekursif dari sisi kanan ke kiri agar node saat ini selalu diuji pada bagian selector yang paling dekat dengan dirinya.
+
+\subsection{Selector Legal dan Tidak Legal}
+
+Selector yang legal adalah selector yang benar-benar didukung oleh implementasi fungsi \texttt{MatchSelector} dan \texttt{Match}. Pada implementasi saat ini, selector sederhana yang legal mencakup tag selector, class selector tunggal, id selector tunggal, dan universal selector. Selain itu, selector relasional dengan combinator \texttt{space} (descendant), \texttt{>} (child), \texttt{+} (adjacent sibling), dan \texttt{\textasciitilde{}} (general sibling) juga legal selama setiap operand kiri-kanannya berupa selector sederhana yang didukung.
+
+\begin{tcblisting}{
+        breakable,
+        colback=gray!3,
+        colframe=black!60,
+        title=Contoh Selector Legal,
+        listing only,
+        left=1mm,
+        right=1mm,
+        top=1mm,
+        bottom=1mm
+    }
+    tag selector: article, p, div
+    class selector: .card, .featured
+    id selector: #main, #news
+    universal selector: *
+    descendant combinator: section article
+    child combinator: section > article
+    adjacent sibling: article + p
+    general sibling: article ~ p
+\end{tcblisting}
+
+Selector tidak legal adalah selector CSS yang tidak memiliki dukungan eksplisit dalam kode. Jika selector seperti ini diberikan, sistem tidak melakukan parsing tingkat lanjut, melainkan mencoba mencocokkan string apa adanya pada jalur fallback, sehingga umumnya menghasilkan tidak ada match.
+
+\begin{tcblisting}{
+        breakable,
+        colback=gray!3,
+        colframe=black!60,
+        title=Contoh Selector Tidak Legal (Tidak Didukung),
+        listing only,
+        left=1mm,
+        right=1mm,
+        top=1mm,
+        bottom=1mm
+    }
+    selector gabungan satu token: article.card, div#main
+    attribute selector: [class="card"], [id]
+    pseudo-class: p:first-child, li:nth-child(2)
+    pseudo-element: p::before
+    selector list: article, p
+    namespace selector: svg|rect
+\end{tcblisting}
+
+\subsection{Pemrosesan Tiap Selector}
+
+Pemrosesan tag selector dilakukan dengan membandingkan langsung \texttt{node.Tag} terhadap string selector. Pemrosesan class selector dilakukan ketika token diawali titik; nilai atribut \texttt{class} dipecah berdasarkan spasi, lalu diperiksa apakah nama class target muncul sebagai token utuh. Pemrosesan id selector dilakukan ketika token diawali tanda pagar dan dibandingkan langsung dengan atribut \texttt{id}. Universal selector \texttt{*} selalu bernilai benar untuk node apa pun.
+
+Untuk combinator, pemrosesan dilakukan pada fungsi \texttt{Match}. Combinator \texttt{>} memeriksa apakah node saat ini cocok dengan operand kanan dan parent langsungnya cocok dengan operand kiri. Combinator \texttt{+} memeriksa sibling elemen sebelumnya yang tepat satu posisi sebelum node. Combinator \texttt{\textasciitilde{}} memeriksa apakah ada sibling sebelumnya yang cocok. Adapun combinator spasi memeriksa apakah ada ancestor mana pun yang cocok dengan selector sisi kiri. Dengan pendekatan ini, selector relasional dapat dievaluasi secara rekursif terhadap struktur DOM yang sudah dibentuk pada tahap parsing.
+
+\begin{ieeealgorithm}{MatchSelector}
+    \Require \texttt{node}, \texttt{selector}
+    \Ensure nilai boolean cocok/tidak cocok
+    \If{\texttt{selector} = \texttt{"*"}}
+    \State \Return \texttt{true}
+    \EndIf
+    \If{\texttt{selector} diawali \texttt{"\#"}}
+    \State \Return \texttt{node.attributes["id"] = selector[1:]}
+    \EndIf
+    \If{\texttt{selector} diawali \texttt{"."}}
+    \State \texttt{classes} $\gets$ split spasi dari \texttt{node.attributes["class"]}
+    \State \Return \texttt{selector[1:]} ada di \texttt{classes}
+    \EndIf
+    \State \Return \texttt{node.tag = selector}
+\end{ieeealgorithm}
+
+\begin{ieeealgorithm}{Match}
+    \Require \texttt{node}, \texttt{selector}
+    \Ensure nilai boolean cocok/tidak cocok
+    \State normalisasi spasi dan operator pada \texttt{selector}
+    \If{ada operator \texttt{" > "} pada \texttt{selector}}
+    \State pecah menjadi \texttt{left} dan \texttt{right}
+    \State \Return \texttt{MatchSelector(node, right)}
+    \Statex \hspace{2.05em} \texttt{AND node.parent != nil AND Match(node.parent, left)}
+    \EndIf
+    \If{ada operator \texttt{" + "} pada \texttt{selector}}
+    \State pecah menjadi \texttt{left} dan \texttt{right}
+    \If{\texttt{MatchSelector(node, right)} = false}
+    \State \Return \texttt{false}
+    \EndIf
+    \State \texttt{prev} $\gets$ sibling elemen tepat sebelum \texttt{node}
+    \State \Return \texttt{prev != nil AND Match(prev, left)}
+    \EndIf
+    \If{ada operator \texttt{" \textasciitilde{} "} pada \texttt{selector}}
+    \State pecah menjadi \texttt{left} dan \texttt{right}
+    \If{\texttt{MatchSelector(node, right)} = false}
+    \State \Return \texttt{false}
+    \EndIf
+    \State \Return ada sibling sebelumnya yang memenuhi \texttt{Match(sibling, left)}
+    \EndIf
+    \If{selector mengandung spasi tanpa operator lain}
+    \State pecah jadi \texttt{left} (ancestor pattern) dan \texttt{right} (node pattern)
+    \If{\texttt{MatchSelector(node, right)} = false}
+    \State \Return \texttt{false}
+    \EndIf
+    \State \Return ada ancestor yang memenuhi \texttt{Match(ancestor, left)}
+    \EndIf
+    \State \Return \texttt{MatchSelector(node, selector)}
+\end{ieeealgorithm}
+
+\subsection{Contoh Penggunaan Selector pada File HTML}
+
+Contoh berikut memperlihatkan satu file HTML sederhana dan beberapa selector legal beserta hasil yang didapatkan. Tujuannya adalah menunjukkan bagaimana perbedaan jenis selector menghasilkan himpunan node yang berbeda walaupun dokumennya sama.
+
+\begin{tcblisting}{
+        breakable,
+        colback=gray!3,
+        colframe=black!60,
+        title=File HTML Contoh,
+        listing only,
+        left=1mm,
+        right=1mm,
+        top=1mm,
+        bottom=1mm
+    }
+    <html>
+    <body>
+    <section id="news">
+    <article class="card">Alpha</article>
+    <article class="card featured">
+    <p class="lead">Intro</p>
+    </article>
+    <p>Outside</p>
+    </section>
+    </body>
+    </html>
+\end{tcblisting}
+
+Pada file tersebut, selector \texttt{article} menghasilkan dua node karena ada dua elemen \texttt{article}. Selector \texttt{.card} juga menghasilkan dua node karena kedua \texttt{article} memiliki class \texttt{card}. Selector \texttt{\#news} hanya menghasilkan satu node, yaitu elemen \texttt{section} yang memiliki id tersebut. Selector relasional \texttt{section > article} menghasilkan dua node karena kedua \texttt{article} adalah child langsung dari \texttt{section}. Selector \texttt{section article} juga menghasilkan dua node, tetapi mekanisme pencariannya berbasis relasi ancestor-descendant. Selector \texttt{article > p} menghasilkan satu node, yaitu \texttt{p} dengan class \texttt{lead}, sedangkan selector \texttt{article + p} dan \texttt{article \textasciitilde{} p} sama-sama menghasilkan satu node \texttt{p} terakhir karena node tersebut berada sesudah elemen \texttt{article} sebagai sibling pada parent yang sama.
+
+Sebagai pembanding, jika pada file yang sama digunakan selector tidak legal seperti \texttt{article.card} atau \texttt{p:first-child}, implementasi saat ini tidak memiliki parser khusus untuk bentuk tersebut sehingga hasilnya cenderung kosong. Oleh karena itu, untuk memperoleh hasil yang konsisten, pengguna harus menyusun query menggunakan bentuk selector yang memang didukung oleh modul selector.
 

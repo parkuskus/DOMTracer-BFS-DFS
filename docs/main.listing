@@ -1,16 +1,11 @@
-    Input HTML
     <html>
     <body>
-    <div>
-    <img class="hero" />
-    <p id="lead">Intro</p>
-    </div>
+    <section id="news">
+    <article class="card">Alpha</article>
+    <article class="card featured">
+    <p class="lead">Intro</p>
+    </article>
+    <p>Outside</p>
+    </section>
     </body>
     </html>
-
-    Output (ringkas)
-    html(depth=0)
-    body(depth=1)
-    div(depth=2)
-    img[class="hero"](depth=3)
-    p[id="lead"] text="Intro" (depth=3)

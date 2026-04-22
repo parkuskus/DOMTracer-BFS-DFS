@@ -40,6 +40,7 @@ docs/*.out
 docs/*.toc
 docs/*.synctex.gz
 docs/*.md
+docs/*.listing
 
 # Node.js
 node_modules/
