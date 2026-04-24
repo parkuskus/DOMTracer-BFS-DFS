@@ -1,8 +1,9 @@
 package selector
 
 import (
-	"github.com/parkuskus/Tubes2_nama_kelompok/src/parser"
 	"strings"
+
+	"github.com/parkuskus/Tubes2_nama_kelompok/src/parser"
 )
 
 func MatchSelector(n *parser.Node, selector string) bool {
@@ -39,33 +40,24 @@ func Match(node *parser.Node, selector string) bool {
 	selector = strings.ReplaceAll(selector, "~", " ~ ")
 
 	selector = strings.Join(strings.Fields(selector), " ")
-	// parent node until root of the defining style property
 
-	if idx := strings.Index(selector, " > "); idx != -1 {
-		left := strings.TrimSpace(selector[:idx])
-		right := strings.TrimSpace(selector[idx+3:])
-		return MatchSelector(node, right) && node.Parent != nil && Match(node.Parent, left)
-	}
-	// single step parental node
-	if idx := strings.Index(selector, " + "); idx != -1 {
-		left := strings.TrimSpace(selector[:idx])
-		right := strings.TrimSpace(selector[idx+3:])
-		if !MatchSelector(node, right) {
-			return false
+	if left, combinator, right, ok := splitLastCombinator(selector); ok {
+		switch combinator {
+		case ">":
+			return MatchSelector(node, right) && node.Parent != nil && Match(node.Parent, left)
+		case "+":
+			if !MatchSelector(node, right) {
+				return false
+			}
+
+			prev := prevElementSibling(node)
+			return prev != nil && Match(prev, left)
+		case "~":
+			if !MatchSelector(node, right) {
+				return false
+			}
+			return hasPrevSibling(node, left)
 		}
-
-		prev := prevElementSibling(node)
-		return prev != nil && Match(prev, left)
-	}
-
-	if idx := strings.Index(selector, " ~ "); idx != -1 {
-		left := strings.TrimSpace(selector[:idx])
-		right := strings.TrimSpace(selector[idx+3:])
-
-		if !MatchSelector(node, right) {
-			return false
-		}
-		return hasPrevSibling(node, left)
 	}
 
 	parts := strings.Fields(selector)
@@ -89,6 +81,23 @@ func Match(node *parser.Node, selector string) bool {
 		}
 	}
 	return MatchSelector(node, selector)
+}
+
+func splitLastCombinator(selector string) (left string, combinator string, right string, ok bool) {
+	parts := strings.Fields(selector)
+	for i := len(parts) - 1; i >= 0; i-- {
+		switch parts[i] {
+		case ">", "+", "~":
+			if i == 0 || i == len(parts)-1 {
+				return "", "", "", false
+			}
+			left = strings.Join(parts[:i], " ")
+			combinator = parts[i]
+			right = strings.Join(parts[i+1:], " ")
+			return left, combinator, right, true
+		}
+	}
+	return "", "", "", false
 }
 
 // finding sibling
