@@ -2,7 +2,10 @@
 
 Implementasi aplikasi DOMTracer dibagi menjadi dua bagian utama, yaitu backend berbasis Go dan frontend berbasis React TypeScript. Backend bertanggung jawab atas pengambilan HTML, parsing DOM, pencocokan CSS selector, dan traversal BFS/DFS. Frontend bertanggung jawab atas antarmuka input, pengiriman request ke backend, visualisasi pohon DOM, panel metrik, dan traversal log.
 
-\begin{longtable}{|>{\raggedright\arraybackslash}p{0.34\textwidth}|>{\raggedright\arraybackslash}p{0.56\textwidth}|}
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|>{\raggedright\arraybackslash}p{0.34\textwidth}|>{\raggedright\arraybackslash}p{0.56\textwidth}|}
     \hline
     \textbf{Direktori/Berkas} & \textbf{Keterangan} \\
     \hline
@@ -24,7 +27,8 @@ Implementasi aplikasi DOMTracer dibagi menjadi dua bagian utama, yaitu backend b
     \hline
     \texttt{test} & Kumpulan file HTML dan expected output yang disiapkan sebagai bahan pengujian. \\
     \hline
-\end{longtable}
+\end{tabular}
+\end{table}
 
 Backend menggunakan modul Go \texttt{golang.org/x/net/html} untuk tokenisasi HTML. Frontend menggunakan Vite, React, TypeScript, Tailwind CSS, dan komponen UI pendukung. Komunikasi antara frontend dan backend dilakukan menggunakan HTTP request dengan payload dan response berformat JSON.
 
@@ -85,7 +89,10 @@ Pada BFS, struktur data yang digunakan adalah queue. Root dimasukkan terlebih da
 
 Kedua algoritma menggunakan fungsi bersama \texttt{processVisit}. Fungsi ini memperbarui \texttt{VisitedCount}, \texttt{MaxDepthVisited}, mengevaluasi selector, menyimpan \texttt{MatchHit}, menambahkan \texttt{VisitEvent} jika log diminta, dan menghentikan traversal jika jumlah match sudah mencapai limit Top-$N$.
 
-\begin{longtable}{|p{0.30\textwidth}|p{0.58\textwidth}|}
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|p{0.30\textwidth}|p{0.58\textwidth}|}
     \hline
     \textbf{Field Hasil} & \textbf{Makna} \\
     \hline
@@ -101,7 +108,8 @@ Kedua algoritma menggunakan fungsi bersama \texttt{processVisit}. Fungsi ini mem
     \hline
     \texttt{StoppedByLimit} & Bernilai true jika traversal berhenti karena Top-$N$. \\
     \hline
-\end{longtable}
+\end{tabular}
+\end{table}
 
 \subsection{HTTP API}
 
@@ -278,7 +286,10 @@ Pengujian akhir belum dilakukan pada tahap penulisan laporan ini. Oleh karena it
 
 \subsection{Template Unit Test Backend}
 
-\begin{longtable}{|p{0.05\textwidth}|p{0.20\textwidth}|p{0.27\textwidth}|p{0.22\textwidth}|p{0.14\textwidth}|}
+\begin{table}[H]
+\centering
+\scriptsize
+\begin{tabular}{|p{0.05\textwidth}|p{0.20\textwidth}|p{0.27\textwidth}|p{0.22\textwidth}|p{0.14\textwidth}|}
     \hline
     \textbf{No.} & \textbf{Modul} & \textbf{Skenario} & \textbf{Ekspektasi} & \textbf{Status} \\
     \hline
@@ -298,11 +309,15 @@ Pengujian akhir belum dilakukan pada tahap penulisan laporan ini. Oleh karena it
     \hline
     8 & Traversal & Selector kosong atau algoritma tidak valid. & Fungsi mengembalikan error yang sesuai. & TBD \\
     \hline
-\end{longtable}
+\end{tabular}
+\end{table}
 
 \subsection{Template Pengujian API}
 
-\begin{longtable}{|p{0.05\textwidth}|p{0.20\textwidth}|p{0.25\textwidth}|p{0.22\textwidth}|p{0.14\textwidth}|}
+\begin{table}[H]
+\centering
+\scriptsize
+\begin{tabular}{|p{0.05\textwidth}|p{0.20\textwidth}|p{0.25\textwidth}|p{0.22\textwidth}|p{0.14\textwidth}|}
     \hline
     \textbf{No.} & \textbf{Endpoint} & \textbf{Input} & \textbf{Ekspektasi} & \textbf{Status} \\
     \hline
@@ -318,11 +333,15 @@ Pengujian akhir belum dilakukan pada tahap penulisan laporan ini. Oleh karena it
     \hline
     6 & \texttt{POST /api/traverse} & Algoritma selain BFS/DFS. & Response error dari \texttt{SearchDOM}. & TBD \\
     \hline
-\end{longtable}
+\end{tabular}
+\end{table}
 
 \subsection{Template Pengujian Fungsional Frontend}
 
-\begin{longtable}{|p{0.05\textwidth}|p{0.24\textwidth}|p{0.34\textwidth}|p{0.20\textwidth}|}
+\begin{table}[H]
+\centering
+\scriptsize
+\begin{tabular}{|p{0.05\textwidth}|p{0.24\textwidth}|p{0.34\textwidth}|p{0.20\textwidth}|}
     \hline
     \textbf{No.} & \textbf{Fitur} & \textbf{Ekspektasi} & \textbf{Status} \\
     \hline
@@ -342,13 +361,17 @@ Pengujian akhir belum dilakukan pada tahap penulisan laporan ini. Oleh karena it
     \hline
     8 & Error handling & Pesan error muncul saat backend offline atau input tidak valid. & TBD \\
     \hline
-\end{longtable}
+\end{tabular}
+\end{table}
 
 \subsection{Template Hasil Eksperimen BFS dan DFS}
 
 Tabel berikut dapat digunakan untuk mencatat perbandingan BFS dan DFS pada dokumen HTML yang sama. Kolom hasil diisi setelah pengujian dijalankan.
 
-\begin{longtable}{|p{0.06\textwidth}|p{0.18\textwidth}|p{0.16\textwidth}|p{0.12\textwidth}|p{0.12\textwidth}|p{0.12\textwidth}|p{0.12\textwidth}|}
+\begin{table}[H]
+\centering
+\scriptsize
+\begin{tabular}{|p{0.06\textwidth}|p{0.18\textwidth}|p{0.16\textwidth}|p{0.12\textwidth}|p{0.12\textwidth}|p{0.12\textwidth}|p{0.12\textwidth}|}
     \hline
     \textbf{No.} & \textbf{Input} & \textbf{Selector} & \textbf{Algo} & \textbf{Visited} & \textbf{Match} & \textbf{Time} \\
     \hline
@@ -364,7 +387,8 @@ Tabel berikut dapat digunakan untuk mencatat perbandingan BFS dan DFS pada dokum
     \hline
     6 & URL publik & \texttt{a} & DFS & TBD & TBD & TBD \\
     \hline
-\end{longtable}
+\end{tabular}
+\end{table}
 
 \subsection{Placeholder Analisis Hasil}
 
