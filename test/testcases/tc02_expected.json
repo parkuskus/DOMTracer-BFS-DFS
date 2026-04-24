@@ -1,0 +1,92 @@
+{
+  "test_case_id": "TC02",
+  "description": "Class Selector — temukan semua elemen dengan class 'highlight' (termasuk multi-class)",
+  "selector": ".highlight",
+  "html_file": "tc02.html",
+  "expected_results": {
+    "status": "success",
+    "matched_count": 4,
+    "matched_elements": [
+      {
+        "data_nid": "5",
+        "tag": "div",
+        "id": "",
+        "classes": [
+          "highlight"
+        ],
+        "depth": 2,
+        "text_content": "Div highlight"
+      },
+      {
+        "data_nid": "7",
+        "tag": "p",
+        "id": "",
+        "classes": [
+          "highlight"
+        ],
+        "depth": 2,
+        "text_content": "Highlighted paragraph"
+      },
+      {
+        "data_nid": "8",
+        "tag": "span",
+        "id": "",
+        "classes": [
+          "highlight",
+          "extra"
+        ],
+        "depth": 2,
+        "text_content": "Multi-class span"
+      },
+      {
+        "data_nid": "10",
+        "tag": "p",
+        "id": "",
+        "classes": [
+          "highlight"
+        ],
+        "depth": 3,
+        "text_content": "Nested highlighted p"
+      }
+    ],
+    "total_element_nodes": 10,
+    "max_tree_depth": 3,
+    "bfs_traversal_order_nids": [
+      "1",
+      "2",
+      "4",
+      "3",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10"
+    ],
+    "bfs_matched_order_nids": [
+      "5",
+      "7",
+      "8",
+      "10"
+    ],
+    "dfs_traversal_order_nids": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10"
+    ],
+    "dfs_matched_order_nids": [
+      "5",
+      "7",
+      "8",
+      "10"
+    ]
+  },
+  "notes": "Elemen span[8] memiliki dua class; harus tetap dicocokkan karena salah satunya adalah 'highlight'."
+}

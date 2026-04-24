@@ -177,7 +177,11 @@ const Index = () => {
 
               <div className="animate-fade-up">
                 {tab === "graph" && (
-                  <TreeGraph root={result.tree} />
+                  <TreeGraph
+                    root={result.tree}
+                    logs={result.traversalLog}
+                    algorithm={result.algorithm}
+                  />
                 )}
                 {tab === "tree" && (
                   <div className="glass rounded-2xl p-6 max-h-[600px] overflow-auto">

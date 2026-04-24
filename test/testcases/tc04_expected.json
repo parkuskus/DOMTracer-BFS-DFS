@@ -1,0 +1,95 @@
+{
+  "test_case_id": "TC04",
+  "description": "Universal Selector — temukan SEMUA elemen dalam pohon DOM",
+  "selector": "*",
+  "html_file": "tc04.html",
+  "expected_results": {
+    "status": "success",
+    "matched_count": 8,
+    "matched_elements": [
+      {
+        "data_nid": "1",
+        "tag": "html",
+        "depth": 0
+      },
+      {
+        "data_nid": "2",
+        "tag": "head",
+        "depth": 1
+      },
+      {
+        "data_nid": "3",
+        "tag": "title",
+        "depth": 2
+      },
+      {
+        "data_nid": "4",
+        "tag": "body",
+        "depth": 1
+      },
+      {
+        "data_nid": "5",
+        "tag": "h1",
+        "depth": 2
+      },
+      {
+        "data_nid": "6",
+        "tag": "p",
+        "depth": 2
+      },
+      {
+        "data_nid": "7",
+        "tag": "div",
+        "depth": 2
+      },
+      {
+        "data_nid": "8",
+        "tag": "span",
+        "depth": 3
+      }
+    ],
+    "total_element_nodes": 8,
+    "max_tree_depth": 3,
+    "bfs_traversal_order_nids": [
+      "1",
+      "2",
+      "4",
+      "3",
+      "5",
+      "6",
+      "7",
+      "8"
+    ],
+    "bfs_matched_order_nids": [
+      "1",
+      "2",
+      "4",
+      "3",
+      "5",
+      "6",
+      "7",
+      "8"
+    ],
+    "dfs_traversal_order_nids": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8"
+    ],
+    "dfs_matched_order_nids": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8"
+    ]
+  },
+  "notes": "matched_count harus sama dengan total_element_nodes. Urutan match berbeda antara BFS dan DFS."
+}
