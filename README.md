@@ -21,3 +21,14 @@ go test ./... -v #for verbose
 ## API Documentation
 
 Dokumentasi endpoint backend dan contoh penggunaannya ada di [docs/api.md](docs/api.md).
+
+# Running Through Docker 
+''' bash 
+    docker compose up 
+'''
+go to http://localhost (not https://) 
+
+if done: 
+''' bash 
+    docker compose down 
+''' 
