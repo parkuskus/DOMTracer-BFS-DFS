@@ -1,0 +1,380 @@
+\section{Lingkungan dan Struktur Implementasi}
+
+Implementasi aplikasi DOMTracer dibagi menjadi dua bagian utama, yaitu backend berbasis Go dan frontend berbasis React TypeScript. Backend bertanggung jawab atas pengambilan HTML, parsing DOM, pencocokan CSS selector, dan traversal BFS/DFS. Frontend bertanggung jawab atas antarmuka input, pengiriman request ke backend, visualisasi pohon DOM, panel metrik, dan traversal log.
+
+\begin{longtable}{|>{\raggedright\arraybackslash}p{0.34\textwidth}|>{\raggedright\arraybackslash}p{0.56\textwidth}|}
+    \hline
+    \textbf{Direktori/Berkas} & \textbf{Keterangan} \\
+    \hline
+    \path{backend/main.go} & Entry point HTTP API yang terhubung dengan frontend melalui endpoint \texttt{/api/traverse} dan \texttt{/api/health}. \\
+    \hline
+    \path{backend/cmd/server/main.go} & Entry point server alternatif yang menyediakan endpoint \texttt{/api/scrape}, \texttt{/api/tree}, \texttt{/api/scrape-upload}, dan \texttt{/api/tree-upload}. \\
+    \hline
+    \path{backend/cmd/cli/main.go} & Program CLI untuk menjalankan pipeline HTML, parsing, traversal, dan penyimpanan traversal log. \\
+    \hline
+    \path{backend/src/parser} & Modul parser HTML dan scraper URL. \\
+    \hline
+    \path{backend/src/selector} & Modul pencocokan CSS selector sederhana dan combinator. \\
+    \hline
+    \path{backend/src/traversal} & Modul BFS, DFS, metrik traversal, hasil match, dan traversal log. \\
+    \hline
+    \path{frontend/src} & Modul API dan tipe data TypeScript yang digunakan frontend. \\
+    \hline
+    \path{frontend/components} & Komponen UI untuk form input, graf pohon, tree view, panel metrik, dan log traversal. \\
+    \hline
+    \texttt{test} & Kumpulan file HTML dan expected output yang disiapkan sebagai bahan pengujian. \\
+    \hline
+\end{longtable}
+
+Backend menggunakan modul Go \texttt{golang.org/x/net/html} untuk tokenisasi HTML. Frontend menggunakan Vite, React, TypeScript, Tailwind CSS, dan komponen UI pendukung. Komunikasi antara frontend dan backend dilakukan menggunakan HTTP request dengan payload dan response berformat JSON.
+
+\section{Implementasi Backend}
+
+\subsection{Struktur Data DOM}
+
+Representasi DOM didefinisikan pada struct \texttt{Node} di modul \texttt{parser}. Setiap node menyimpan nama tag, teks, atribut, parent, children, dan depth. Field \texttt{Parent} diperlukan oleh selector combinator seperti child, descendant, adjacent sibling, dan general sibling. Field \texttt{Children} digunakan oleh algoritma BFS dan DFS untuk menelusuri subtree, sedangkan \texttt{Depth} digunakan untuk metrik dan visualisasi.
+
+\begin{tcblisting}{
+        colback=gray!3,
+        colframe=black!60,
+        title=Ringkasan Struktur Node,
+        listing only,
+        left=1mm,
+        right=1mm,
+        top=1mm,
+        bottom=1mm
+    }
+    type Node struct {
+        Tag        string
+        Text       string
+        Attributes map[string]string
+        Parent     *Node
+        Children   []*Node
+        Depth      int
+    }
+\end{tcblisting}
+
+\subsection{Modul Parser dan Scraper}
+
+Modul \texttt{parser} memiliki dua fungsi utama, yaitu mengambil HTML dari URL dan mengubah HTML mentah menjadi pohon DOM. Fungsi \texttt{FetchHTML} membuat HTTP GET request dengan timeout 10 detik dan header \texttt{User-Agent} agar request lebih menyerupai browser. Fungsi \texttt{HTMLScraper} menggabungkan proses fetch dan parsing sehingga dapat langsung menghasilkan root DOM.
+
+Parsing dilakukan oleh fungsi \texttt{ParseHTML}. Fungsi ini membuat tokenizer HTML, root semu \texttt{document}, dan stack node aktif. Ketika tokenizer membaca \texttt{StartTagToken}, parser membuat node baru, menyalin atribut, menautkannya ke parent pada puncak stack, lalu memasukkannya ke stack apabila tag tersebut bukan tag kosong. Ketika tokenizer membaca \texttt{TextToken}, teks dibersihkan dengan \texttt{TrimSpace} dan disimpan pada node aktif. Ketika tokenizer membaca \texttt{EndTagToken}, stack dipop sampai tag yang sesuai ditemukan. Untuk \texttt{SelfClosingTagToken}, node ditambahkan sebagai child tetapi tidak dimasukkan ke stack.
+
+Daftar tag kosong seperti \texttt{img}, \texttt{br}, \texttt{hr}, \texttt{input}, \texttt{meta}, dan \texttt{link} disimpan dalam \texttt{selfClosingTags}. Dengan pendekatan ini, parser dapat membentuk relasi parent-child secara linear terhadap token HTML.
+
+\subsection{Modul Selector}
+
+Modul \texttt{selector} menyediakan dua tingkat pencocokan. Fungsi \texttt{MatchSelector} menangani selector sederhana, yaitu universal selector \texttt{*}, id selector \texttt{\#id}, class selector \texttt{.class}, dan tag selector. Untuk class selector, nilai atribut \texttt{class} dipisahkan menggunakan \texttt{strings.Fields} sehingga pencocokan dilakukan terhadap token class utuh.
+
+Fungsi \texttt{Match} menangani selector relasional. Sebelum diproses, string selector dinormalisasi dengan menambahkan spasi di sekitar operator \texttt{>}, \texttt{+}, dan \texttt{\textasciitilde{}}, kemudian spasi berlebih diringkas. Setelah itu, selector dievaluasi dari sisi kanan karena node yang sedang dikunjungi adalah kandidat hasil akhir. Implementasi mendukung:
+
+\begin{itemize}
+    \item \texttt{A B}, untuk descendant combinator melalui pengecekan ancestor.
+    \item \texttt{A > B}, untuk child combinator melalui pengecekan parent langsung.
+    \item \texttt{A + B}, untuk adjacent sibling combinator melalui pengecekan sibling sebelumnya.
+    \item \texttt{A \textasciitilde{} B}, untuk general sibling combinator melalui pengecekan semua sibling sebelumnya.
+\end{itemize}
+
+Dengan pemisahan ini, traversal tidak perlu mengetahui detail CSS selector. Traversal hanya memanggil \texttt{selector.Match(node, selector)} pada setiap node yang dikunjungi.
+
+\subsection{Modul Traversal}
+
+Modul \texttt{traversal} menyediakan fungsi utama \texttt{SearchDOM}. Fungsi ini menerima root DOM dan \texttt{SearchRequest}, memvalidasi selector, menentukan algoritma, lalu memanggil \texttt{searchBFS} atau \texttt{searchDFS}. Jika algoritma tidak diisi, sistem menggunakan BFS sebagai default.
+
+Pada BFS, struktur data yang digunakan adalah queue. Root dimasukkan terlebih dahulu dengan path \texttt{0}. Setiap node diproses dari depan queue, kemudian seluruh anaknya dimasukkan ke belakang queue sesuai urutan asli. Pada DFS, struktur data yang digunakan adalah stack. Anak node dimasukkan dari kanan ke kiri agar ketika dipop, urutan kunjungan tetap kiri ke kanan.
+
+Kedua algoritma menggunakan fungsi bersama \texttt{processVisit}. Fungsi ini memperbarui \texttt{VisitedCount}, \texttt{MaxDepthVisited}, mengevaluasi selector, menyimpan \texttt{MatchHit}, menambahkan \texttt{VisitEvent} jika log diminta, dan menghentikan traversal jika jumlah match sudah mencapai limit Top-$N$.
+
+\begin{longtable}{|p{0.30\textwidth}|p{0.58\textwidth}|}
+    \hline
+    \textbf{Field Hasil} & \textbf{Makna} \\
+    \hline
+    \texttt{Matches} & Daftar node yang cocok dengan selector. \\
+    \hline
+    \texttt{VisitedCount} & Jumlah node yang sudah dikunjungi traversal. \\
+    \hline
+    \texttt{MaxDepthVisited} & Kedalaman maksimum yang dicapai saat traversal. \\
+    \hline
+    \texttt{DurationMs} & Durasi traversal dalam milidetik. \\
+    \hline
+    \texttt{TraversalLog} & Daftar event kunjungan node per langkah. \\
+    \hline
+    \texttt{StoppedByLimit} & Bernilai true jika traversal berhenti karena Top-$N$. \\
+    \hline
+\end{longtable}
+
+\subsection{HTTP API}
+
+Untuk integrasi dengan frontend, server pada \texttt{backend/main.go} menyediakan endpoint \texttt{POST /api/traverse}. Endpoint ini menerima input berupa URL atau HTML mentah, mode input, algoritma, CSS selector, dan limit hasil. Setelah menerima request, server menjalankan pipeline berikut:
+
+\begin{enumerate}
+    \item Validasi field \texttt{input} dan \texttt{cssSelector}.
+    \item Jika \texttt{inputMode = html}, input langsung diparse dengan \texttt{ParseHTML}; selain itu input dianggap sebagai URL dan diproses dengan \texttt{HTMLScraper}.
+    \item Jalankan \texttt{SearchDOM} dengan traversal log selalu diaktifkan untuk kebutuhan visualisasi.
+    \item Bentuk set \texttt{traversedPaths} dan \texttt{matchedPaths} dari hasil traversal.
+    \item Konversi pohon \texttt{parser.Node} menjadi \texttt{treeNodeJSON} yang sudah memiliki \texttt{isTraversed}, \texttt{isMatched}, dan \texttt{nodeId}.
+    \item Konversi traversal log backend menjadi format log frontend.
+    \item Kirim response JSON berisi tree, traversal log, metrik, algoritma, dan selector.
+\end{enumerate}
+
+\begin{tcblisting}{
+        colback=gray!3,
+        colframe=black!60,
+        title=Contoh Request POST /api/traverse,
+        listing only,
+        left=1mm,
+        right=1mm,
+        top=1mm,
+        bottom=1mm
+    }
+    {
+      "input": "https://example.com",
+      "inputMode": "url",
+      "algorithm": "BFS",
+      "cssSelector": "a",
+      "limit": 10
+    }
+\end{tcblisting}
+
+\begin{tcblisting}{
+        colback=gray!3,
+        colframe=black!60,
+        title=Ringkasan Response Frontend,
+        listing only,
+        left=1mm,
+        right=1mm,
+        top=1mm,
+        bottom=1mm
+    }
+    {
+      "tree": { "...": "annotated DOM tree" },
+      "traversalLog": [],
+      "metrics": {
+        "searchTimeMs": 0,
+        "visitedNodeCount": 0,
+        "matchedNodeCount": 0,
+        "maxDepth": 0
+      },
+      "algorithm": "BFS",
+      "selector": "a"
+    }
+\end{tcblisting}
+
+Selain endpoint utama tersebut, server alternatif pada \texttt{backend/cmd/server/main.go} menyediakan endpoint yang lebih eksplisit untuk kebutuhan scraping, tree, dan upload file. Endpoint ini berguna apabila pengujian backend ingin dilakukan langsung menggunakan \texttt{curl} atau tool API tanpa frontend.
+
+\section{Implementasi Frontend}
+
+Frontend dibangun sebagai aplikasi satu halaman. Komponen \texttt{Index.tsx} menjadi halaman utama yang mengatur state hasil traversal, status loading, error, tab aktif, dan status koneksi backend. Saat halaman dibuka, frontend memanggil \texttt{/api/health} untuk memastikan backend aktif.
+
+\subsection{Form Input}
+
+Komponen \texttt{InputForm.tsx} menyediakan konfigurasi traversal. Pengguna dapat memilih sumber input berupa URL, raw HTML, atau file HTML. Untuk mode file, browser membaca file dengan \texttt{FileReader} lalu mengirim isi file sebagai input HTML. Pengguna juga memilih algoritma BFS/DFS, CSS selector, dan batas hasil berupa semua hasil atau Top-$N$.
+
+State form dikirim ke fungsi \texttt{runTraversal} pada \texttt{frontend/src/api.ts}. Fungsi ini membentuk payload \texttt{TraverseRequest}. Jika mode input adalah file, frontend mengirimnya sebagai mode \texttt{html} karena isi file sudah dibaca menjadi string.
+
+\subsection{Integrasi API}
+
+Modul \texttt{api.ts} menggunakan environment variable \texttt{VITE\_API\_BASE\_URL}; jika tidak tersedia, default-nya adalah \texttt{http://localhost:8080}. Fungsi \texttt{runTraversal} mengirim request ke \texttt{/api/traverse}. Jika backend tidak dapat dihubungi, frontend menampilkan pesan error agar pengguna mengetahui bahwa server perlu dijalankan.
+
+Tipe data response didefinisikan pada \texttt{frontend/src/types.ts}. Interface \texttt{ApiResponse} berisi \texttt{tree}, \texttt{traversalLog}, \texttt{metrics}, \texttt{algorithm}, dan \texttt{selector}. Shape ini disamakan dengan response dari \texttt{backend/main.go}.
+
+\subsection{Visualisasi Pohon dan Log}
+
+Komponen \texttt{TreeGraph.tsx} menampilkan DOM sebagai graf SVG. Layout pohon dihitung berdasarkan jumlah leaf pada setiap subtree. Setiap node memiliki koordinat \texttt{x} dan \texttt{y}, lalu edge digambar sebagai kurva antar parent dan child. Node yang cocok dengan selector diberi warna berbeda melalui field \texttt{isMatched}.
+
+Komponen \texttt{TreeNode.tsx} menampilkan struktur DOM dalam bentuk tree view yang dapat dibuka dan ditutup. Node yang sudah dikunjungi diberi style berbeda melalui \texttt{isTraversed}, sedangkan node yang cocok diberi penanda match. Komponen ini juga menampilkan sebagian atribut dan potongan teks node.
+
+Komponen \texttt{TraversalLog.tsx} menampilkan setiap langkah traversal. Log berisi nomor step, tag node, path node, pesan kunjungan, dan status match. Komponen ini juga menyediakan filter untuk menampilkan hanya node yang match.
+
+\subsection{Panel Metrik}
+
+Komponen \texttt{MetricsPanel.tsx} menampilkan empat metrik utama, yaitu waktu pencarian, jumlah node yang dikunjungi, jumlah match, dan kedalaman maksimum. Metrik ini berasal dari hasil traversal backend dan digunakan untuk membandingkan perilaku BFS dan DFS pada input yang sama.
+
+\section{Cara Menjalankan Aplikasi}
+
+Backend yang sesuai dengan endpoint frontend dapat dijalankan dari direktori \texttt{backend} dengan perintah berikut.
+
+\begin{tcblisting}{
+        colback=gray!3,
+        colframe=black!60,
+        title=Menjalankan Backend Utama,
+        listing only,
+        left=1mm,
+        right=1mm,
+        top=1mm,
+        bottom=1mm
+    }
+    go run ./main.go
+\end{tcblisting}
+
+Frontend dapat dijalankan dari direktori \texttt{frontend} dengan perintah berikut.
+
+\begin{tcblisting}{
+        colback=gray!3,
+        colframe=black!60,
+        title=Menjalankan Frontend,
+        listing only,
+        left=1mm,
+        right=1mm,
+        top=1mm,
+        bottom=1mm
+    }
+    bun run dev
+\end{tcblisting}
+
+Apabila ingin menjalankan server alternatif yang menyediakan endpoint \texttt{/api/scrape} dan \texttt{/api/tree}, perintah yang digunakan adalah sebagai berikut.
+
+\begin{tcblisting}{
+        colback=gray!3,
+        colframe=black!60,
+        title=Menjalankan Server Alternatif,
+        listing only,
+        left=1mm,
+        right=1mm,
+        top=1mm,
+        bottom=1mm
+    }
+    go run ./cmd/server/main.go
+\end{tcblisting}
+
+\section{Rencana dan Template Pengujian}
+
+Pengujian akhir belum dilakukan pada tahap penulisan laporan ini. Oleh karena itu, bagian ini disiapkan sebagai template pengujian yang dapat langsung dilengkapi setelah eksperimen dijalankan. Pengujian dirancang untuk mencakup unit test backend, integrasi API, validasi frontend, dan perbandingan BFS/DFS.
+
+\subsection{Perintah Pengujian}
+
+\begin{tcblisting}{
+        colback=gray!3,
+        colframe=black!60,
+        title=Template Perintah Pengujian Backend,
+        listing only,
+        left=1mm,
+        right=1mm,
+        top=1mm,
+        bottom=1mm
+    }
+    cd backend
+    go test ./src/parser -v
+    go test ./src/selector -v
+    go test ./src/traversal -v
+    go test ./... -v
+\end{tcblisting}
+
+\begin{tcblisting}{
+        colback=gray!3,
+        colframe=black!60,
+        title=Template Perintah Pengujian Frontend,
+        listing only,
+        left=1mm,
+        right=1mm,
+        top=1mm,
+        bottom=1mm
+    }
+    cd frontend
+    bun run lint
+    bun run test
+    bun run build
+\end{tcblisting}
+
+\subsection{Template Unit Test Backend}
+
+\begin{longtable}{|p{0.05\textwidth}|p{0.20\textwidth}|p{0.27\textwidth}|p{0.22\textwidth}|p{0.14\textwidth}|}
+    \hline
+    \textbf{No.} & \textbf{Modul} & \textbf{Skenario} & \textbf{Ekspektasi} & \textbf{Status} \\
+    \hline
+    1 & Parser & Parsing HTML sederhana dengan tag bertingkat. & Root, child, depth, dan atribut terbentuk benar. & TBD \\
+    \hline
+    2 & Parser & Parsing tag kosong seperti \texttt{img} dan \texttt{br}. & Tag kosong menjadi node tanpa mengganggu stack parent. & TBD \\
+    \hline
+    3 & Selector & Tag, class, id, dan universal selector. & \texttt{MatchSelector} mengembalikan boolean sesuai selector. & TBD \\
+    \hline
+    4 & Selector & Combinator \texttt{>}, spasi, \texttt{+}, dan \texttt{\textasciitilde{}}. & \texttt{Match} mengenali relasi parent, ancestor, dan sibling. & TBD \\
+    \hline
+    5 & Traversal & BFS tanpa limit. & Node dikunjungi per level dan semua match ditemukan. & TBD \\
+    \hline
+    6 & Traversal & DFS tanpa limit. & Node dikunjungi mendalam dengan urutan sibling kiri-ke-kanan. & TBD \\
+    \hline
+    7 & Traversal & Top-$N$ dengan limit positif. & Traversal berhenti saat jumlah match mencapai limit. & TBD \\
+    \hline
+    8 & Traversal & Selector kosong atau algoritma tidak valid. & Fungsi mengembalikan error yang sesuai. & TBD \\
+    \hline
+\end{longtable}
+
+\subsection{Template Pengujian API}
+
+\begin{longtable}{|p{0.05\textwidth}|p{0.20\textwidth}|p{0.25\textwidth}|p{0.22\textwidth}|p{0.14\textwidth}|}
+    \hline
+    \textbf{No.} & \textbf{Endpoint} & \textbf{Input} & \textbf{Ekspektasi} & \textbf{Status} \\
+    \hline
+    1 & \texttt{GET /api/health} & Tidak ada body. & Response status OK dan JSON \texttt{status}. & TBD \\
+    \hline
+    2 & \texttt{POST /api/traverse} & URL valid, selector \texttt{a}, algoritma BFS. & Response berisi tree, log, metrik, algoritma, dan selector. & TBD \\
+    \hline
+    3 & \texttt{POST /api/traverse} & Raw HTML, selector \texttt{.card}, algoritma DFS. & Response memiliki match sesuai class pada HTML. & TBD \\
+    \hline
+    4 & \texttt{POST /api/traverse} & Input kosong. & Response error validasi. & TBD \\
+    \hline
+    5 & \texttt{POST /api/traverse} & Selector kosong. & Response error validasi. & TBD \\
+    \hline
+    6 & \texttt{POST /api/traverse} & Algoritma selain BFS/DFS. & Response error dari \texttt{SearchDOM}. & TBD \\
+    \hline
+\end{longtable}
+
+\subsection{Template Pengujian Fungsional Frontend}
+
+\begin{longtable}{|p{0.05\textwidth}|p{0.24\textwidth}|p{0.34\textwidth}|p{0.20\textwidth}|}
+    \hline
+    \textbf{No.} & \textbf{Fitur} & \textbf{Ekspektasi} & \textbf{Status} \\
+    \hline
+    1 & Health check backend & Status backend berubah menjadi online ketika \texttt{/api/health} dapat diakses. & TBD \\
+    \hline
+    2 & Input URL & Form mengirim URL ke backend dan menampilkan hasil traversal. & TBD \\
+    \hline
+    3 & Input raw HTML & Form mengirim string HTML sebagai mode \texttt{html}. & TBD \\
+    \hline
+    4 & Input file HTML & Isi file dibaca dengan \texttt{FileReader} dan dikirim sebagai HTML. & TBD \\
+    \hline
+    5 & Tab Graph & Pohon DOM tampil sebagai SVG dan node match ter-highlight. & TBD \\
+    \hline
+    6 & Tab Tree & Struktur DOM dapat diekspansi dan node match terlihat. & TBD \\
+    \hline
+    7 & Tab Log & Log traversal tampil sesuai urutan step dan dapat difilter match. & TBD \\
+    \hline
+    8 & Error handling & Pesan error muncul saat backend offline atau input tidak valid. & TBD \\
+    \hline
+\end{longtable}
+
+\subsection{Template Hasil Eksperimen BFS dan DFS}
+
+Tabel berikut dapat digunakan untuk mencatat perbandingan BFS dan DFS pada dokumen HTML yang sama. Kolom hasil diisi setelah pengujian dijalankan.
+
+\begin{longtable}{|p{0.06\textwidth}|p{0.18\textwidth}|p{0.16\textwidth}|p{0.12\textwidth}|p{0.12\textwidth}|p{0.12\textwidth}|p{0.12\textwidth}|}
+    \hline
+    \textbf{No.} & \textbf{Input} & \textbf{Selector} & \textbf{Algo} & \textbf{Visited} & \textbf{Match} & \textbf{Time} \\
+    \hline
+    1 & \texttt{test/cases/case\_1.html} & \texttt{article} & BFS & TBD & TBD & TBD \\
+    \hline
+    2 & \texttt{test/cases/case\_1.html} & \texttt{article} & DFS & TBD & TBD & TBD \\
+    \hline
+    3 & \texttt{test/cases/case\_2.html} & \texttt{.card} & BFS & TBD & TBD & TBD \\
+    \hline
+    4 & \texttt{test/cases/case\_2.html} & \texttt{.card} & DFS & TBD & TBD & TBD \\
+    \hline
+    5 & URL publik & \texttt{a} & BFS & TBD & TBD & TBD \\
+    \hline
+    6 & URL publik & \texttt{a} & DFS & TBD & TBD & TBD \\
+    \hline
+\end{longtable}
+
+\subsection{Placeholder Analisis Hasil}
+
+Setelah pengujian dilakukan, analisis dapat diisi dengan poin berikut:
+
+\begin{itemize}
+    \item Apakah BFS dan DFS menghasilkan jumlah match yang sama untuk selector tanpa limit.
+    \item Perbedaan urutan match antara BFS dan DFS berdasarkan traversal log.
+    \item Pengaruh Top-$N$ terhadap jumlah node yang dikunjungi.
+    \item Perbedaan waktu eksekusi pada dokumen kecil dan dokumen besar.
+    \item Kasus selector yang tidak didukung dan bagaimana aplikasi menampilkan hasilnya.
+    \item Kesesuaian visualisasi frontend terhadap hasil traversal backend.
+\end{itemize}

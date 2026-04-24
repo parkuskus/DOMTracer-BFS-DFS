@@ -1,0 +1,47 @@
+\section{Document Object Model}
+
+Document Object Model (DOM) adalah representasi dokumen HTML dalam bentuk struktur pohon yang dapat diakses oleh program. Setiap elemen HTML direpresentasikan sebagai node, sedangkan hubungan antarelemen direpresentasikan sebagai relasi \textit{parent}, \textit{child}, dan \textit{sibling}. Pada konteks tugas ini, DOM menjadi model data utama karena proses pencarian elemen berdasarkan CSS selector dapat dipandang sebagai penelusuran node pada pohon berakar \cite{whatwgdom}.
+
+Sebuah pohon DOM memiliki satu akar utama, umumnya elemen \texttt{html}. Di bawah akar tersebut terdapat subtree seperti \texttt{head} dan \texttt{body}, lalu elemen-elemen lain yang bersarang di dalamnya. Informasi yang penting untuk pencarian meliputi nama tag, atribut, teks, daftar anak, parent, dan kedalaman node. Kedalaman dipakai untuk mengetahui posisi node terhadap root, sedangkan jalur dari root ke node dapat digunakan untuk menampilkan rute hasil pencarian pada antarmuka aplikasi.
+
+\section{HTML Parsing}
+
+HTML parsing adalah proses mengubah dokumen HTML mentah menjadi struktur DOM yang terorganisasi. Parser membaca token HTML seperti \textit{start tag}, \textit{end tag}, teks, dan \textit{self-closing tag}, lalu menyusun token tersebut menjadi pohon sesuai aturan penyarangan elemen HTML \cite{whatwghtml}. Dalam implementasi aplikasi, tahap ini diperlukan sebelum BFS atau DFS dijalankan karena algoritma traversal membutuhkan struktur node dan relasi parent-child yang eksplisit.
+
+Salah satu pendekatan umum untuk membangun pohon dari token HTML adalah menggunakan stack. Ketika parser menemukan tag pembuka, node baru dibuat sebagai anak dari node pada puncak stack, kemudian node tersebut dimasukkan ke stack jika bukan elemen kosong. Ketika tag penutup ditemukan, stack dipop hingga tag yang sesuai ditemukan. Untuk tag kosong seperti \texttt{img}, \texttt{br}, \texttt{meta}, atau \texttt{input}, node tetap dimasukkan ke pohon tetapi tidak menjadi parent aktif. Pendekatan ini efisien karena dokumen dapat diproses secara linear terhadap panjang input.
+
+\section{CSS Selector}
+
+CSS selector adalah pola yang digunakan untuk memilih elemen HTML tertentu. Dalam CSS, selector berfungsi menghubungkan aturan gaya dengan elemen target; dalam aplikasi ini, selector digunakan sebagai predikat pencarian terhadap node DOM \cite{w3cselectors}. Sebuah node dianggap cocok apabila tag, atribut, atau relasi strukturalnya memenuhi selector yang diberikan pengguna.
+
+Selector sederhana yang relevan dengan implementasi terdiri atas tag selector, class selector, id selector, dan universal selector. Tag selector memilih node berdasarkan nama tag, misalnya \texttt{article}. Class selector memilih node yang memiliki class tertentu, misalnya \texttt{.product\_pod}. ID selector memilih node dengan atribut \texttt{id} tertentu, misalnya \texttt{\#main}. Universal selector \texttt{*} memilih semua node.
+
+Selain selector sederhana, CSS juga mengenal combinator untuk menyatakan relasi antarnode. Descendant combinator \texttt{A B} memilih node \texttt{B} yang memiliki ancestor \texttt{A}. Child combinator \texttt{A > B} memilih node \texttt{B} yang parent langsungnya adalah \texttt{A}. Adjacent sibling combinator \texttt{A + B} memilih node \texttt{B} yang muncul tepat setelah sibling \texttt{A}. General sibling combinator \texttt{A \textasciitilde{} B} memilih node \texttt{B} yang muncul setelah sibling \texttt{A} pada parent yang sama. Keempat relasi ini sesuai dengan informasi struktural yang tersedia pada pohon DOM.
+
+\section{Traversal Graf pada Pohon DOM}
+
+Pohon DOM dapat dipandang sebagai graf terhubung tanpa siklus dengan satu root. Oleh karena itu, pencarian elemen pada DOM dapat dilakukan dengan algoritma traversal graf. Dua strategi traversal yang digunakan pada tugas ini adalah Breadth-First Search (BFS) dan Depth-First Search (DFS). Keduanya mengunjungi node-node pada pohon dan mengevaluasi selector pada setiap node, tetapi memiliki urutan kunjungan yang berbeda \cite{cormen2009introduction}.
+
+\subsection{Breadth-First Search}
+
+Breadth-First Search menelusuri pohon secara melebar dari root. Node pada kedalaman yang lebih kecil dikunjungi lebih dahulu sebelum node pada kedalaman berikutnya. Secara umum, BFS menggunakan struktur data queue dengan prinsip FIFO (\textit{First In, First Out}). Pada DOM, BFS cocok digunakan ketika elemen target diperkirakan berada dekat dengan root atau ketika urutan hasil berdasarkan level pohon lebih diinginkan.
+
+Jika jumlah node adalah $N$, kompleksitas waktu BFS adalah $O(N)$ karena setiap node dikunjungi paling banyak satu kali. Kompleksitas ruangnya bergantung pada lebar maksimum pohon, yaitu $O(W)$, karena queue dapat menyimpan banyak node pada level yang sama. Dalam pencarian berbasis selector, biaya total dapat ditulis sebagai $O(N \cdot C)$, dengan $C$ sebagai biaya evaluasi selector pada satu node.
+
+\subsection{Depth-First Search}
+
+Depth-First Search menelusuri pohon secara mendalam. Algoritma ini mengunjungi satu cabang sampai sejauh mungkin, lalu kembali untuk memproses cabang lain. DFS dapat diimplementasikan secara rekursif atau iteratif menggunakan stack dengan prinsip LIFO (\textit{Last In, First Out}). Pada DOM, DFS cocok untuk mengeksplorasi subtree yang dalam karena traversal segera masuk ke anak sebuah node sebelum berpindah ke sibling berikutnya.
+
+Sama seperti BFS, kompleksitas waktu DFS adalah $O(N)$ untuk mengunjungi seluruh node. Kompleksitas ruang DFS iteratif bergantung pada tinggi pohon dan jumlah node yang tersimpan pada stack, sehingga pada pohon yang relatif seimbang dapat mendekati $O(H)$, dengan $H$ sebagai tinggi pohon. Pada kasus terburuk, ruang yang digunakan tetap dapat mencapai $O(N)$.
+
+\section{Pencarian Elemen dan Metrik Traversal}
+
+Pencarian elemen pada aplikasi ini dilakukan dengan menggabungkan traversal dan selector matching. Traversal menentukan urutan node yang dikunjungi, sedangkan selector menentukan apakah node tersebut masuk ke daftar hasil. Karena BFS dan DFS memakai predikat selector yang sama, himpunan hasil untuk pencarian tanpa limit seharusnya sama; perbedaannya terletak pada urutan hasil, traversal log, dan jumlah node yang dikunjungi sebelum berhenti ketika fitur Top-$N$ digunakan.
+
+Beberapa metrik penting yang digunakan untuk mengevaluasi pencarian adalah jumlah node yang dikunjungi, jumlah node yang cocok, kedalaman maksimum yang dijangkau, waktu eksekusi, dan status berhenti karena limit. Jumlah node yang dikunjungi menunjukkan besar area DOM yang dieksplorasi. Kedalaman maksimum membantu menggambarkan seberapa jauh traversal masuk ke struktur dokumen. Waktu eksekusi digunakan untuk membandingkan efisiensi praktis BFS dan DFS pada selector serta dokumen yang sama. Traversal log menyimpan urutan kunjungan node sehingga proses pencarian dapat divisualisasikan kembali pada frontend.
+
+\section{Aplikasi Web dan Pertukaran Data}
+
+Aplikasi tugas besar ini memisahkan pemrosesan utama pada backend dan visualisasi pada frontend. Backend bertugas mengambil atau menerima HTML, melakukan parsing, menjalankan BFS atau DFS, mengevaluasi selector, dan mengembalikan hasil dalam format JSON. Frontend bertugas menyediakan masukan pengguna, menampilkan pohon DOM, menyorot hasil pencarian, serta menyajikan metrik dan log traversal.
+
+Format JSON sesuai untuk pertukaran data karena struktur node, atribut, daftar anak, hasil pencarian, dan log traversal dapat direpresentasikan secara hierarkis. Dengan demikian, pohon DOM yang diproses di backend dapat divisualisasikan kembali oleh frontend tanpa kehilangan informasi penting seperti tag, atribut, teks, kedalaman, path node, dan status kecocokan selector.
