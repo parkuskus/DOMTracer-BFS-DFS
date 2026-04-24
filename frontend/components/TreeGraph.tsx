@@ -1,11 +1,20 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import type { LogEntry, TreeNode } from "../src/types";
-import { Check, Filter, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
+import {
+  Maximize2,
+  Minimize2,
+  Pause,
+  Play,
+  RotateCcw,
+  StepForward,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react";
 
 interface Props {
   root: TreeNode;
   logs?: LogEntry[];
-  algorithm?: string;
 }
 interface PN { node: TreeNode; x: number; y: number; children: PN[]; }
 
@@ -16,6 +25,15 @@ const V_GAP = 76;
 const MIN_ZOOM = 0.35;
 const MAX_ZOOM = 1.8;
 const ZOOM_STEP = 0.15;
+const ACTIVE_COLOR = "hsl(132 95% 48%)";
+const ACTIVE_FILL = "hsl(132 95% 48% / 0.24)";
+const ACTIVE_NODE_FILL = "hsl(132 95% 48% / 0.36)";
+const SPEED_OPTIONS = [
+  { label: "0.25x", ms: 900 },
+  { label: "0.5x", ms: 600 },
+  { label: "1x", ms: 350 },
+  { label: "2x", ms: 160 },
+];
 
 function leafCount(n: TreeNode): number {
   if (!n.children?.length) return 1;
@@ -49,10 +67,13 @@ function edges(p: PN, out: [PN, PN][] = []): [PN, PN][] {
   return out;
 }
 
-export default function TreeGraph({ root, logs = [], algorithm }: Props) {
+export default function TreeGraph({ root, logs = [] }: Props) {
   const [hover, setHover] = useState<string | null>(null);
-  const [showOnlyMatches, setShowOnlyMatches] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [currentLogIndex, setCurrentLogIndex] = useState(-1);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [speedMs, setSpeedMs] = useState(350);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const { nodes, eds, w, h } = useMemo(() => {
     const { p, w } = layout(root, 0, 0);
@@ -62,22 +83,148 @@ export default function TreeGraph({ root, logs = [], algorithm }: Props) {
     return { nodes: ns, eds: es, w: Math.max(w, 600), h: maxY };
   }, [root]);
 
-  const filteredLogs = showOnlyMatches ? logs.filter((l) => l.isMatch) : logs;
-  const matchCount = logs.filter((l) => l.isMatch).length;
+  const currentLog = currentLogIndex >= 0 ? logs[currentLogIndex] : null;
+  const visitedNodeIds = useMemo(
+    () => new Set(logs.slice(0, currentLogIndex + 1).map((l) => l.nodeId)),
+    [logs, currentLogIndex],
+  );
+  const progress = logs.length > 0 ? ((currentLogIndex + 1) / logs.length) * 100 : 0;
   const zoomPercent = Math.round(zoom * 100);
+
+  useEffect(() => {
+    setCurrentLogIndex(-1);
+    setIsPlaying(logs.length > 0);
+  }, [logs, root]);
+
+  useEffect(() => {
+    if (!isPlaying || logs.length === 0) return;
+
+    const timer = window.setTimeout(() => {
+      setCurrentLogIndex((index) => {
+        if (index >= logs.length - 1) {
+          setIsPlaying(false);
+          return index;
+        }
+        return index + 1;
+      });
+    }, speedMs);
+
+    return () => window.clearTimeout(timer);
+  }, [currentLogIndex, isPlaying, logs.length, speedMs]);
+
+  useEffect(() => {
+    if (!isFullscreen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsFullscreen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isFullscreen]);
 
   function updateZoom(delta: number) {
     setZoom((value) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value + delta)));
   }
 
-  return (
-    <div className="glass rounded-2xl overflow-hidden">
+  function restartAnimation() {
+    setCurrentLogIndex(-1);
+    setIsPlaying(logs.length > 0);
+  }
+
+  function togglePlayback() {
+    if (isPlaying) {
+      setIsPlaying(false);
+      return;
+    }
+
+    if (currentLogIndex >= logs.length - 1) {
+      setCurrentLogIndex(-1);
+    }
+    setIsPlaying(logs.length > 0);
+  }
+
+  function stepForward() {
+    setIsPlaying(false);
+    setCurrentLogIndex((index) => Math.min(logs.length - 1, index + 1));
+  }
+
+  const containerClass = [
+    "glass overflow-hidden",
+    isFullscreen
+      ? "fixed inset-0 z-[100] rounded-none flex flex-col bg-background"
+      : "rounded-2xl",
+  ].join(" ");
+  const contentClass = [
+    "flex flex-col",
+    isFullscreen ? "flex-1 min-h-0" : "min-h-[460px]",
+  ].join(" ");
+  const graphViewportClass = [
+    "overflow-auto p-6",
+    isFullscreen ? "flex-1 min-h-0 max-h-none" : "min-h-[420px] max-h-[640px]",
+  ].join(" ");
+
+  const graphPanel = (
+    <div className={containerClass}>
       <header className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-white/50 bg-white/40">
         <div className="min-w-0">
           <span className="text-sm font-semibold text-foreground/80">Tree graph</span>
           <span className="ml-2 text-xs text-muted-foreground font-medium">{nodes.length} nodes</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={togglePlayback}
+            className="h-8 w-8 rounded-lg inline-flex items-center justify-center bg-gradient-primary text-primary-foreground shadow-soft transition-all disabled:opacity-40"
+            disabled={logs.length === 0}
+            aria-label={isPlaying ? "Pause animation" : "Play animation"}
+            title={isPlaying ? "Pause animation" : "Play animation"}
+          >
+            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+          </button>
+          <button
+            type="button"
+            onClick={stepForward}
+            className="h-8 w-8 rounded-lg inline-flex items-center justify-center bg-white/70 text-foreground/70 hover:bg-white border border-white/60 transition-all disabled:opacity-40"
+            disabled={logs.length === 0 || currentLogIndex >= logs.length - 1}
+            aria-label="Next step"
+            title="Next step"
+          >
+            <StepForward className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={restartAnimation}
+            className="h-8 w-8 rounded-lg inline-flex items-center justify-center bg-white/70 text-foreground/70 hover:bg-white border border-white/60 transition-all disabled:opacity-40"
+            disabled={logs.length === 0}
+            aria-label="Restart animation"
+            title="Restart animation"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+          <select
+            value={speedMs}
+            onChange={(event) => setSpeedMs(Number(event.target.value))}
+            className="h-8 rounded-lg bg-white/70 border border-white/60 px-2 text-xs font-semibold text-foreground/70 outline-none"
+            aria-label="Animation speed"
+            title="Animation speed"
+          >
+            {SPEED_OPTIONS.map((option) => (
+              <option key={option.ms} value={option.ms}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <span className="h-6 w-px bg-white/60" />
           <button
             type="button"
             onClick={() => updateZoom(-ZOOM_STEP)}
@@ -110,10 +257,35 @@ export default function TreeGraph({ root, logs = [], algorithm }: Props) {
           >
             <RotateCcw className="w-4 h-4" />
           </button>
+          <button
+            type="button"
+            onClick={() => setIsFullscreen((value) => !value)}
+            className="h-8 w-8 rounded-lg inline-flex items-center justify-center bg-white/70 text-foreground/70 hover:bg-white border border-white/60 transition-all"
+            aria-label={isFullscreen ? "Exit fullscreen graph" : "Fullscreen graph"}
+            title={isFullscreen ? "Exit fullscreen graph" : "Fullscreen graph"}
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
         </div>
       </header>
-      <div className="flex flex-col min-h-[460px]">
-        <div className="overflow-auto p-6 min-h-[420px] max-h-[640px]">
+      <div className={contentClass}>
+        <div className="px-5 py-3 border-b border-white/50 bg-white/30">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span className="font-semibold text-foreground/75">
+              Step {Math.max(0, currentLogIndex + 1)} / {logs.length}
+            </span>
+            <span className="text-muted-foreground truncate max-w-full sm:max-w-[70%]">
+              {currentLog ? currentLog.message : "Ready to animate traversal"}
+            </span>
+          </div>
+          <div className="mt-2 h-1.5 rounded-full bg-white/70 overflow-hidden">
+            <div
+              className="h-full bg-gradient-primary transition-[width] duration-200"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+        <div className={graphViewportClass}>
           <svg
             width={w * zoom}
             height={h * zoom}
@@ -141,13 +313,23 @@ export default function TreeGraph({ root, logs = [], algorithm }: Props) {
 
             {eds.map(([a, b], i) => {
               const targetX = a.x === b.x ? b.x + 0.1 : b.x;
+              const isChildVisited = visitedNodeIds.has(b.node.nodeId);
+              const isChildCurrent = currentLog?.nodeId === b.node.nodeId;
 
               return (
                 <path
                   key={i}
                   d={`M ${a.x} ${a.y + NODE_H / 2} C ${a.x} ${(a.y + b.y) / 2}, ${targetX} ${(a.y + b.y) / 2}, ${targetX} ${b.y - NODE_H / 2}`}
-                  stroke={b.node.isMatched ? "url(#edgeMatch)" : "url(#edge)"}
-                  strokeWidth={b.node.isMatched ? 2 : 1.5}
+                  stroke={
+                    isChildCurrent
+                      ? ACTIVE_COLOR
+                      : isChildVisited && b.node.isMatched
+                      ? "url(#edgeMatch)"
+                      : isChildVisited
+                      ? "hsl(var(--primary) / 0.55)"
+                      : "url(#edge)"
+                  }
+                  strokeWidth={isChildCurrent ? 2.5 : isChildVisited ? 2 : 1.5}
                   fill="none"
                 />
               );
@@ -156,6 +338,10 @@ export default function TreeGraph({ root, logs = [], algorithm }: Props) {
             {nodes.map((p) => {
               const isHover = hover === p.node.nodeId;
               const isMatch = p.node.isMatched;
+              const isVisited = visitedNodeIds.has(p.node.nodeId);
+              const isCurrent = currentLog?.nodeId === p.node.nodeId;
+              const isRevealedMatch = isVisited && isMatch;
+
               return (
                 <g
                   key={p.node.nodeId}
@@ -163,30 +349,53 @@ export default function TreeGraph({ root, logs = [], algorithm }: Props) {
                   onMouseEnter={() => setHover(p.node.nodeId)}
                   onMouseLeave={() => setHover(null)}
                   className="cursor-pointer"
-                  filter={isMatch ? "url(#glow)" : undefined}
+                  filter={isRevealedMatch ? "url(#glow)" : undefined}
                 >
+                  {isCurrent && (
+                    <rect
+                      x={-5}
+                      y={-5}
+                      width={NODE_W + 10}
+                      height={NODE_H + 10}
+                      rx={14}
+                      fill={ACTIVE_FILL}
+                    />
+                  )}
                   <rect
                     width={NODE_W}
                     height={NODE_H}
                     rx={10}
-                    fill={isMatch ? "url(#nodeMatch)" : "hsl(0 0% 100% / 0.85)"}
-                    stroke={
-                      isMatch
-                        ? "transparent"
-                        : isHover
-                        ? "hsl(var(--primary))"
-                        : "hsl(var(--primary) / 0.25)"
+                    className="transition-all duration-200"
+                    fill={
+                      isCurrent
+                        ? ACTIVE_NODE_FILL
+                        : isRevealedMatch
+                        ? "url(#nodeMatch)"
+                        : isVisited
+                        ? "hsl(var(--primary-soft) / 0.75)"
+                        : "hsl(0 0% 100% / 0.85)"
                     }
-                    strokeWidth={1.5}
+                    stroke={
+                      isCurrent
+                        ? ACTIVE_COLOR
+                        : isRevealedMatch
+                      ? "transparent"
+                      : isHover
+                      ? "hsl(var(--primary))"
+                      : isVisited
+                      ? "hsl(var(--primary) / 0.45)"
+                      : "hsl(var(--primary) / 0.25)"
+                    }
+                    strokeWidth={isCurrent ? 2.5 : 1.5}
                   />
                   <text
                     x={NODE_W / 2}
                     y={NODE_H / 2 + 4}
                     textAnchor="middle"
                     fontSize="12"
-                    fontWeight={isMatch ? 700 : 600}
+                    fontWeight={isRevealedMatch || isCurrent ? 700 : 600}
                     fontFamily="Sora, system-ui, sans-serif"
-                    fill={isMatch ? "white" : "hsl(var(--foreground))"}
+                    fill={isRevealedMatch && !isCurrent ? "white" : "hsl(var(--foreground))"}
                   >
                     &lt;{p.node.tag}&gt;
                   </text>
@@ -195,68 +404,9 @@ export default function TreeGraph({ root, logs = [], algorithm }: Props) {
             })}
           </svg>
         </div>
-
-        <aside className="border-t border-white/50 bg-white/30 flex flex-col min-h-[240px] max-h-[360px]">
-          <header className="px-4 py-3 border-b border-white/50 flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-foreground/80 truncate">
-                traversal {algorithm ? `- ${algorithm}` : ""} - {logs.length} steps
-              </p>
-              <p className="text-[11px] text-muted-foreground">{matchCount} matches</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowOnlyMatches((v) => !v)}
-              className={[
-                "h-8 w-8 rounded-lg inline-flex items-center justify-center transition-all shrink-0",
-                showOnlyMatches
-                  ? "bg-gradient-primary text-primary-foreground shadow-soft"
-                  : "bg-white/70 text-foreground/70 hover:bg-white border border-white/60",
-              ].join(" ")}
-              aria-label="Filter matches"
-              title="Filter matches"
-            >
-              <Filter className="w-4 h-4" />
-            </button>
-          </header>
-
-          <div className="overflow-y-auto flex-1">
-            {filteredLogs.length === 0 ? (
-              <div className="px-4 py-10 text-center text-muted-foreground text-sm">No entries.</div>
-            ) : (
-              <ol className="divide-y divide-white/40">
-                {filteredLogs.map((l) => (
-                  <li
-                    key={l.step}
-                    className={[
-                      "px-4 py-2.5 flex items-start gap-2.5 text-xs transition-colors hover:bg-white/40",
-                      l.isMatch ? "bg-primary-soft/40" : "",
-                    ].join(" ")}
-                  >
-                    <span className="w-8 pt-0.5 font-semibold text-muted-foreground tabular-nums shrink-0">
-                      #{String(l.step).padStart(2, "0")}
-                    </span>
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-primary-soft text-primary shrink-0">
-                          &lt;{l.nodeTag}&gt;
-                        </span>
-                        <span className="font-mono text-[11px] text-foreground/45 truncate">
-                          {l.nodeId}
-                        </span>
-                        {l.isMatch && (
-                          <Check className="w-3.5 h-3.5 text-success shrink-0" />
-                        )}
-                      </div>
-                      <p className="text-foreground/70 leading-snug line-clamp-2">{l.message}</p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </div>
-        </aside>
       </div>
     </div>
   );
+
+  return isFullscreen ? createPortal(graphPanel, document.body) : graphPanel;
 }

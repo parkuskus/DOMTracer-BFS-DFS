@@ -180,7 +180,6 @@ const Index = () => {
                   <TreeGraph
                     root={result.tree}
                     logs={result.traversalLog}
-                    algorithm={result.algorithm}
                   />
                 )}
                 {tab === "tree" && (
