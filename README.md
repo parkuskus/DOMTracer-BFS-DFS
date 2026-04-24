@@ -32,3 +32,6 @@ if done:
 ''' bash 
     docker compose down 
 ''' 
+
+# Access Through http (public IP) 
+http://20.205.18.149/

@@ -1,7 +1,7 @@
 import type { ApiResponse, TraverseRequest } from "./types";
 import type { FormState } from "../components/InputForm";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
 function buildPayload(form: FormState): TraverseRequest {
   return {
