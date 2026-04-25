@@ -6,7 +6,7 @@ DOMTracer adalah aplikasi visualisasi penelusuran DOM berbasis algoritma BFS dan
 
 ## Deskripsi Program
 
-Program menerima input HTML (URL atau raw HTML), melakukan parsing menjadi pohon DOM, lalu menjalankan pencarian node berdasarkan CSS selector. Hasil ditampilkan dalam bentuk:
+Program menerima input HTML (URL atau raw HTML), melakukan parsing menjadi pohon DOM, lalu menjalankan pencarian node berdasarkan CSS selector. Hasil ditampilkan dalam bentuk di bawah ini.
 
 - Tree graph
 - Daftar traversal langkah demi langkah
@@ -62,8 +62,8 @@ Program menerima input HTML (URL atau raw HTML), melakukan parsing menjadi pohon
 
 ## Penjelasan Singkat Algoritma BFS dan DFS
 
-- BFS (Breadth-First Search): menelusuri node per tingkat (level-order). Semua node pada depth yang sama diperiksa terlebih dahulu sebelum turun ke depth berikutnya.
-- DFS (Depth-First Search): menelusuri sedalam mungkin pada satu cabang, kemudian backtrack ke cabang lain.
+- BFS (Breadth-First Search)menelusuri node per tingkat (level-order). Semua node pada depth yang sama diperiksa terlebih dahulu sebelum turun ke depth berikutnya.
+- DFS (Depth-First Search) menelusuri sedalam mungkin pada satu cabang, kemudian backtrack ke cabang lain.
 
 Pada implementasi ini, kedua algoritma mengevaluasi selector di setiap node yang dikunjungi. Perbedaan utama ada pada urutan kunjungan node, sehingga urutan match bisa berbeda walau jumlah match total biasanya sama.
 
@@ -98,7 +98,7 @@ docker compose down
 
 Input file berupa dokumen HTML valid (`.html` / `.htm`).
 
-Contoh file input:
+Contoh file input adalah sebagai berikut. 
 
 ```html
 <!DOCTYPE html>
