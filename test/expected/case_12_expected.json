@@ -1,0 +1,90 @@
+{
+  "test_case_id": "TC10",
+  "description": "Complex Chained Combinator — div.container > ul > li: li harus anak langsung ul, yang anak langsung div.container",
+  "selector": ".container > ul > li",
+  "html_file": "tc10.html",
+  "expected_results": {
+    "status": "success",
+    "matched_count": 3,
+    "matched_elements": [
+      {
+        "data_nid": "7",
+        "tag": "li",
+        "depth": 4,
+        "text_content": "Item 1",
+        "chain": "div.container[5] > ul[6] > li[7]"
+      },
+      {
+        "data_nid": "8",
+        "tag": "li",
+        "depth": 4,
+        "text_content": "Item 2",
+        "chain": "div.container[5] > ul[6] > li[8]"
+      },
+      {
+        "data_nid": "9",
+        "tag": "li",
+        "depth": 4,
+        "text_content": "Item 3",
+        "chain": "div.container[5] > ul[6] > li[9]"
+      }
+    ],
+    "not_matched": [
+      {
+        "data_nid": "11",
+        "tag": "li",
+        "reason": "parent-nya adalah ol[10], bukan ul"
+      },
+      {
+        "data_nid": "14",
+        "tag": "li",
+        "reason": "ancestor div[12] tidak memiliki class 'container'"
+      }
+    ],
+    "total_element_nodes": 14,
+    "max_tree_depth": 4,
+    "bfs_traversal_order_nids": [
+      "1",
+      "2",
+      "4",
+      "3",
+      "5",
+      "12",
+      "6",
+      "10",
+      "13",
+      "7",
+      "8",
+      "9",
+      "11",
+      "14"
+    ],
+    "bfs_matched_order_nids": [
+      "7",
+      "8",
+      "9"
+    ],
+    "dfs_traversal_order_nids": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14"
+    ],
+    "dfs_matched_order_nids": [
+      "7",
+      "8",
+      "9"
+    ]
+  },
+  "notes": "Tiga kondisi harus terpenuhi sekaligus: (1) ancestor div punya class 'container', (2) ul adalah anak langsung div tersebut, (3) li adalah anak langsung ul tersebut."
+}

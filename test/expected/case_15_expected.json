@@ -1,0 +1,70 @@
+{
+  "test_case_id": "case_15",
+  "description": "Multi-class Selector — elemen harus memiliki class 'highlight' DAN class 'btn' sekaligus",
+  "selector": ".highlight.btn",
+  "html_file": "case_15.html",
+  "expected_results": {
+    "status": "success",
+    "matched_count": 2,
+    "matched_elements": [
+      {
+        "data_nid": "5",
+        "tag": "div",
+        "depth": 2,
+        "attributes": {
+          "id": "special",
+          "class": "highlight btn"
+        },
+        "reason": "memiliki kedua class: 'highlight' dan 'btn'"
+      },
+      {
+        "data_nid": "12",
+        "tag": "span",
+        "depth": 2,
+        "attributes": {
+          "class": "btn highlight extra"
+        },
+        "reason": "memiliki kedua class: 'btn' dan 'highlight' (urutan di atribut tidak relevan)"
+      }
+    ],
+    "not_matched": [
+      {
+        "data_nid": "7",
+        "tag": "button",
+        "reason": "hanya memiliki class 'btn', tidak memiliki 'highlight'"
+      },
+      {
+        "data_nid": "8",
+        "tag": "button",
+        "reason": "memiliki 'btn' dan 'primary', tetapi tidak memiliki 'highlight'"
+      },
+      {
+        "data_nid": "9",
+        "tag": "a",
+        "reason": "hanya memiliki class 'btn', tidak memiliki 'highlight'"
+      },
+      {
+        "data_nid": "10",
+        "tag": "p",
+        "reason": "hanya memiliki class 'info', tidak memiliki keduanya"
+      },
+      {
+        "data_nid": "11",
+        "tag": "div",
+        "reason": "hanya memiliki class 'highlight', tidak memiliki 'btn'"
+      }
+    ],
+    "total_element_nodes": 12,
+    "max_tree_depth": 3,
+    "bfs_traversal_order_nids": ["1","2","4","3","5","7","8","9","10","11","12","6"],
+    "bfs_matched_order_nids": ["5","12"],
+    "dfs_traversal_order_nids": ["1","2","3","4","5","6","7","8","9","10","11","12"],
+    "dfs_matched_order_nids": ["5","12"]
+  },
+  "notes": [
+    "Multi-class selector mensyaratkan SEMUA class terpenuhi sekaligus — ini berbeda dengan 'elemen punya salah satu dari class-class tersebut'.",
+    "span[12] memiliki tiga class (btn highlight extra) namun tetap COCOK karena kedua class yang disyaratkan ada.",
+    "Urutan penulisan class dalam atribut HTML tidak relevan: 'btn highlight' dan 'highlight btn' dianggap sama.",
+    "Gunakan bersama TC-ULTIMATE-D2 (selector '.btn') untuk memverifikasi bahwa implementasi tidak salah menginterpretasi multi-class sebagai single-class."
+  ]
+}

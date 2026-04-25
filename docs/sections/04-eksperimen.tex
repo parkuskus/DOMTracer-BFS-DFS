@@ -415,6 +415,30 @@ Limit node: semua &
 20 match, 541 node dikunjungi, kedalaman maksimum 13, tidak berhenti karena limit. \\
 \hline
 \hasilGraphLog{output/no11c.png}{output/no11c-log.png}{Selector \texttt{.btn} dijalankan dengan DFS tanpa limit pada dokumen besar. Hasil ini menunjukkan bahwa meskipun urutan kunjungan DFS berbeda dari BFS, jumlah match akhir tetap sama ketika seluruh node selesai ditelusuri.}
+
+\texttt{case\_12.html} &
+Algoritma: BFS\newline
+CSS selector: \texttt{.container > ul > li}\newline
+Limit node: semua &
+3 match, 14 node dikunjungi, kedalaman maksimum 4, tidak berhenti karena limit. \\
+\hline
+\hasilGraph{output/no12.png}{Chained child combinator menguji tiga kondisi relasional sekaligus: node hasil harus berupa \texttt{li}, parent langsungnya harus \texttt{ul}, dan \texttt{ul} tersebut harus menjadi child langsung dari elemen dengan class \texttt{container}. Tiga \texttt{li} pada \texttt{ul} di dalam \texttt{div.container} cocok, sedangkan \texttt{li} di dalam \texttt{ol} dan \texttt{li} pada \texttt{div} tanpa class \texttt{container} tidak ikut terpilih.}
+
+\texttt{case\_13.html} &
+Algoritma: BFS\newline
+CSS selector: \texttt{h1 \textasciitilde{} p}\newline
+Limit node: semua &
+3 match, 10 node dikunjungi, kedalaman maksimum 2, tidak berhenti karena limit. \\
+\hline
+\hasilGraph{output/no13.png}{General sibling combinator memilih seluruh elemen \texttt{p} yang berada setelah \texttt{h1} pada parent yang sama. Berbeda dari adjacent sibling, elemen \texttt{p} tidak harus tepat berada setelah \texttt{h1}; karena itu paragraf kedua dan paragraf setelah \texttt{span} tetap dianggap match selama memiliki sibling \texttt{h1} sebelumnya.}
+
+\texttt{case\_14.html} &
+Algoritma: BFS\newline
+CSS selector: \texttt{\#special}\newline
+Limit node: semua &
+1 match, elemen \texttt{div} dengan \texttt{id="special"}, kedalaman maksimum 3, tidak berhenti karena limit. \\
+\hline
+\hasilGraph{output/no14.png}{ID selector memeriksa atribut \texttt{id} secara langsung dan hanya mencocokkan node dengan nilai \texttt{special}. Elemen \texttt{div} yang juga memiliki class \texttt{highlight btn} menjadi satu-satunya match; elemen tanpa atribut \texttt{id} dan elemen dengan \texttt{id="other"} tidak ikut dipilih. Tampilan aplikasi menghitung elemen \texttt{meta} sebagai node visual tambahan, tetapi hasil match selector tetap sesuai expected.}
 \end{longtable}
 
 Berdasarkan tabel pengujian, implementasi mampu menangani selector dasar, combinator, selector yang tidak didukung, HTML kosong, HTML tidak sempurna, serta limit Top-$N$. Pada kasus tanpa limit, traversal mengunjungi seluruh node yang relevan dan jumlah match sesuai expected. Pada kasus Top-$N$, traversal berhenti hanya ketika jumlah match telah mencapai batas yang diberikan.

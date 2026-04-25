@@ -1,0 +1,46 @@
+{
+  "test_case_id": "case_14",
+  "description": "ID Selector — mencocokkan elemen dengan atribut id='special'",
+  "selector": "#special",
+  "html_file": "case_14.html",
+  "expected_results": {
+    "status": "success",
+    "matched_count": 1,
+    "matched_elements": [
+      {
+        "data_nid": "5",
+        "tag": "div",
+        "depth": 2,
+        "attributes": {
+          "id": "special",
+          "class": "highlight btn"
+        },
+        "reason": "satu-satunya elemen dengan id='special'"
+      }
+    ],
+    "not_matched": [
+      {
+        "data_nid": "6",
+        "tag": "span",
+        "reason": "tidak memiliki atribut id sama sekali"
+      },
+      {
+        "data_nid": "7",
+        "tag": "div",
+        "reason": "tidak memiliki atribut id, hanya class='highlight'"
+      },
+      {
+        "data_nid": "8",
+        "tag": "div",
+        "reason": "memiliki id tetapi nilainya 'other', bukan 'special'"
+      }
+    ],
+    "total_element_nodes": 8,
+    "max_tree_depth": 3,
+    "bfs_traversal_order_nids": ["1","2","4","3","5","7","8","6"],
+    "bfs_matched_order_nids": ["5"],
+    "dfs_traversal_order_nids": ["1","2","3","4","5","6","7","8"],
+    "dfs_matched_order_nids": ["5"]
+  },
+  "notes": "ID selector harus menghasilkan tepat satu elemen karena id bersifat unik dalam dokumen HTML yang valid. Elemen dengan class serupa (div.highlight[7]) maupun id berbeda (div#other[8]) tidak boleh ikut cocok."
+}

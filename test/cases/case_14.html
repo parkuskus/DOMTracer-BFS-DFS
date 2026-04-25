@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<!--
+  TC-ULTIMATE-D1: ID Selector — selector: "#special"
+  Struktur pohon (8 element nodes):
+
+  html[1]
+  ├── head[2]
+  │   └── title[3]
+  └── body[4]
+      ├── div#special.highlight.btn[5]  → MATCH #special
+      │   └── span[6]
+      ├── div.highlight[7]              → NO MATCH (tidak punya id)
+      └── div#other[8]                  → NO MATCH (id berbeda)
+-->
+<html data-nid="1" lang="id">
+<head data-nid="2">
+  <meta charset="UTF-8">
+  <title data-nid="3">TC-ULTIMATE-D1: ID Selector</title>
+</head>
+<body data-nid="4">
+
+  <div data-nid="5" id="special" class="highlight btn">
+    <span data-nid="6">Konten dalam div#special</span>
+  </div>
+
+  <div data-nid="7" class="highlight">Hanya class highlight, tanpa id — TIDAK COCOK</div>
+
+  <div data-nid="8" id="other">Id berbeda — TIDAK COCOK</div>
+
+</body>
+</html>

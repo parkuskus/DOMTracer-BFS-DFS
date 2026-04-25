@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<!--
+  TC-ULTIMATE-D3: Multi-class Selector — selector: ".highlight.btn"
+  Elemen harus memiliki KEDUA class sekaligus.
+
+  html[1]
+  ├── head[2]
+  │   └── title[3]
+  └── body[4]
+      ├── div#special.highlight.btn[5]   → MATCH (punya highlight DAN btn)
+      │   └── span[6]
+      ├── button.btn[7]                  → NO MATCH (hanya btn)
+      ├── button.btn.primary[8]          → NO MATCH (btn + primary, tanpa highlight)
+      ├── a.btn[9]                       → NO MATCH (hanya btn)
+      ├── p.info[10]                     → NO MATCH (tidak punya keduanya)
+      ├── div.highlight[11]              → NO MATCH (hanya highlight)
+      └── span.btn.highlight.extra[12]   → MATCH (punya btn DAN highlight)
+-->
+<html data-nid="1" lang="id">
+<head data-nid="2">
+  <meta charset="UTF-8">
+  <title data-nid="3">TC-ULTIMATE-D3: Multi-class Selector</title>
+</head>
+<body data-nid="4">
+
+  <div data-nid="5" id="special" class="highlight btn">
+    <span data-nid="6">Konten dalam div#special — induk COCOK</span>
+  </div>
+
+  <button data-nid="7" class="btn">Tombol 1 — TIDAK COCOK (hanya btn)</button>
+  <button data-nid="8" class="btn primary">Tombol 2 — TIDAK COCOK (btn + primary, tanpa highlight)</button>
+  <a data-nid="9" class="btn" href="#">Link tombol — TIDAK COCOK (hanya btn)</a>
+  <p data-nid="10" class="info">Paragraf info — TIDAK COCOK</p>
+  <div data-nid="11" class="highlight">Hanya highlight — TIDAK COCOK</div>
+  <span data-nid="12" class="btn highlight extra">Multi-class — COCOK (punya btn DAN highlight)</span>
+
+</body>
+</html>
