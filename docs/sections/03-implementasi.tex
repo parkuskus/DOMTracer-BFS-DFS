@@ -184,7 +184,16 @@ Pada awal proses, selector dinormalisasi dengan menambahkan spasi di sekitar ope
 
 \subsection{Selector Legal dan Tidak Legal}
 
-Selector yang legal adalah selector yang benar-benar didukung oleh implementasi fungsi \texttt{MatchSelector} dan \texttt{Match}. Pada implementasi, selector sederhana yang legal mencakup tag selector, class selector tunggal, id selector tunggal, dan universal selector. Selain itu, selector relasional dengan combinator \texttt{space} (descendant), \texttt{>} (child), \texttt{+} (adjacent sibling), dan \texttt{\textasciitilde{}} (general sibling) juga legal selama setiap operand kiri dan kanannya berupa selector sederhana yang didukung.
+Selector yang legal adalah selector yang benar-benar didukung oleh implementasi fungsi \texttt{MatchSelector} dan \texttt{Match}. Pada implementasi, selector sederhana yang legal mencakup sebagai berikut.
+
+\begin{itemize}
+    \item tag selector, class selector, id selector, dan universal selector;
+    \item selector gabungan dalam satu token seperti \texttt{article.card}, \texttt{div\#main}, atau kombinasi berantai \texttt{div.card.featured\#main};
+    \item multi-class selector seperti \texttt{.card.featured};
+    \item attribute selector \texttt{[attr]} dan \texttt{[attr=value]}, baik berdiri sendiri maupun digabung dengan tag/class/id, misalnya \texttt{article[data-id=10]}.
+\end{itemize}
+
+Selain itu, selector relasional dengan combinator \texttt{space} (descendant), \texttt{>} (child), \texttt{+} (adjacent sibling), dan \texttt{\textasciitilde{}} (general sibling) juga legal, termasuk ketika digunakan secara berantai (multiple combinator).
 
 \begin{tcblisting}{
         breakable,
@@ -201,13 +210,17 @@ Selector yang legal adalah selector yang benar-benar didukung oleh implementasi 
     class selector: .card, .featured
     id selector: #main, #news
     universal selector: *
+    tag+class/id: article.card, div#main, div.card.featured#hero
+    multi-class: .card.featured
+    attribute selector: [id], [data-role=main], article[data-kind=nav]
     descendant combinator: section article
     child combinator: section > article
     adjacent sibling: article + p
     general sibling: article ~ p
+    multiple combinator: section > article.card > p.lead
 \end{tcblisting}
 
-Selector tidak legal adalah selector CSS yang tidak memiliki dukungan eksplisit dalam kode. Jika selector seperti ini diberikan, sistem tidak melakukan parsing tingkat lanjut, melainkan mencoba mencocokkan string apa adanya pada jalur fallback, sehingga umumnya menghasilkan tidak ada match.
+Selector tidak legal adalah selector CSS yang tidak memiliki dukungan eksplisit dalam kode. Jika selector seperti ini diberikan, proses pencocokan akan gagal karena bentuk tersebut tidak diparsing oleh modul selector saat ini.
 
 \begin{tcblisting}{
         breakable,
@@ -220,67 +233,96 @@ Selector tidak legal adalah selector CSS yang tidak memiliki dukungan eksplisit 
         top=1mm,
         bottom=1mm
     }
-    selector gabungan satu token: article.card, div#main
-    attribute selector: [class="card"], [id]
     pseudo-class: p:first-child, li:nth-child(2)
     pseudo-element: p::before
     selector list: article, p
     namespace selector: svg|rect
+    attribute operator lanjutan: [href^="https"], [class~="card"]
+    atribut dengan sintaks tidak valid: [id, [data-role=main
 \end{tcblisting}
 
 \subsection{Pemrosesan Tiap Selector}
 
-Pemrosesan tag selector dilakukan dengan membandingkan langsung \texttt{node.Tag} terhadap string selector. Pemrosesan class selector dilakukan ketika token diawali titik; nilai atribut \texttt{class} dipecah berdasarkan spasi, lalu diperiksa apakah nama class target muncul sebagai token utuh. Pemrosesan id selector dilakukan ketika token diawali tanda pagar dan dibandingkan langsung dengan atribut \texttt{id}. Universal selector \texttt{*} selalu bernilai benar untuk node apa pun.
+Pada implementasi terbaru, pemrosesan selector sederhana tidak lagi dibatasi pada satu bentuk token saja. Fungsi \texttt{MatchSelector} pertama-tama melakukan normalisasi \texttt{trim} dan menangani kasus khusus \texttt{*}. Setelah itu, selector dipecah menjadi dua bagian: tag di depan (opsional) dan sisa token. Sisa token diproses berurutan berdasarkan prefiks \texttt{\#}, \texttt{.}, dan \texttt{[...]} sehingga bentuk gabungan seperti \texttt{div.card\#hero[data-id=10]} dapat divalidasi dalam satu node. Jika ada bagian token yang tidak valid, proses langsung gagal.
 
-Untuk combinator, pemrosesan dilakukan pada fungsi \texttt{Match}. Combinator \texttt{>} memeriksa apakah node saat ini cocok dengan operand kanan dan parent langsungnya cocok dengan operand kiri. Combinator \texttt{+} memeriksa sibling elemen sebelumnya yang tepat satu posisi sebelum node. Combinator \texttt{\textasciitilde{}} memeriksa apakah ada sibling sebelumnya yang cocok. Adapun combinator spasi memeriksa apakah ada ancestor mana pun yang cocok dengan selector sisi kiri. Dengan pendekatan ini, selector relasional dapat dievaluasi secara rekursif terhadap struktur DOM yang sudah dibentuk pada tahap parsing.
+Untuk selector relasional, fungsi \texttt{Match} menormalisasi operator \texttt{>}, \texttt{+}, dan \texttt{\textasciitilde{}} agar parsing konsisten. Lalu modul mencari combinator paling kanan (rightmost) menggunakan \texttt{splitLastCombinator}. Strategi ini memastikan query berantai seperti \texttt{.container > ul > li} dievaluasi dari sisi node terdekat terlebih dahulu, kemudian rekursif ke kiri. Jika tidak ada combinator eksplisit, selector dengan spasi diproses sebagai relasi ancestor-descendant; selain itu, selector diperlakukan sebagai selector sederhana.
 
 \begin{ieeealgorithm}{MatchSelector}
     \Require \texttt{node}, \texttt{selector}
     \Ensure nilai boolean cocok/tidak cocok
+    \State \texttt{selector} $\gets$ trim(\texttt{selector})
+    \If{\texttt{selector} kosong}
+    \State \Return \texttt{false}
+    \EndIf
     \If{\texttt{selector} = \texttt{"*"}}
     \State \Return \texttt{true}
     \EndIf
-    \If{\texttt{selector} diawali \texttt{"\#"}}
-    \State \Return \texttt{node.attributes["id"] = selector[1:]}
+
+    \State \texttt{tag, rest} $\gets$ \textsc{parseLeadingTag}(\texttt{selector})
+    \If{\texttt{tag} tidak kosong \textbf{dan} \texttt{node.tag != tag}}
+    \State \Return \texttt{false}
     \EndIf
-    \If{\texttt{selector} diawali \texttt{"."}}
-    \State \texttt{classes} $\gets$ split spasi dari \texttt{node.attributes["class"]}
-    \State \Return \texttt{selector[1:]} ada di \texttt{classes}
+
+    \While{\texttt{rest} belum habis}
+    \If{karakter pertama \texttt{rest} adalah \texttt{"\#"}}
+    \State \texttt{id, next, ok} $\gets$ \textsc{parseIdentifier}(\texttt{rest[1:]})
+    \If{\texttt{ok = false} \textbf{atau} \texttt{node.attributes["id"] != id}}
+    \State \Return \texttt{false}
     \EndIf
-    \State \Return \texttt{node.tag = selector}
+    \State \texttt{rest} $\gets$ \texttt{next}
+    \ElsIf{karakter pertama \texttt{rest} adalah \texttt{"."}}
+    \State \texttt{className, next, ok} $\gets$ \textsc{parseIdentifier}(\texttt{rest[1:]})
+    \If{\texttt{ok = false} \textbf{atau} \textsc{hasClass}(\texttt{node, className}) = false}
+    \State \Return \texttt{false}
+    \EndIf
+    \State \texttt{rest} $\gets$ \texttt{next}
+    \ElsIf{karakter pertama \texttt{rest} adalah \texttt{"["}}
+    \State \texttt{consumed, ok} $\gets$ \textsc{matchAttributeSelector}(\texttt{node, rest})
+    \If{\texttt{ok = false}}
+    \State \Return \texttt{false}
+    \EndIf
+    \State \texttt{rest} $\gets$ \texttt{rest[consumed:]}
+    \Else
+    \State \Return \texttt{false}
+    \EndIf
+    \EndWhile
+
+    \State \Return \texttt{true}
 \end{ieeealgorithm}
 
 \begin{ieeealgorithm}{Match}
     \Require \texttt{node}, \texttt{selector}
     \Ensure nilai boolean cocok/tidak cocok
     \State normalisasi spasi dan operator pada \texttt{selector}
-    \If{ada operator \texttt{" > "} pada \texttt{selector}}
-    \State pecah menjadi \texttt{left} dan \texttt{right}
+    \State \texttt{left, op, right, ok} $\gets$ \textsc{splitLastCombinator}(\texttt{selector})
+    \If{\texttt{ok}}
+    \If{\texttt{op = ">"}}
     \State \Return \texttt{MatchSelector(node, right)}
     \Statex \hspace{2.05em} \texttt{AND node.parent != nil AND Match(node.parent, left)}
-    \EndIf
-    \If{ada operator \texttt{" + "} pada \texttt{selector}}
-    \State pecah menjadi \texttt{left} dan \texttt{right}
+    \ElsIf{\texttt{op = "+"}}
     \If{\texttt{MatchSelector(node, right)} = false}
     \State \Return \texttt{false}
     \EndIf
-    \State \texttt{prev} $\gets$ sibling elemen tepat sebelum \texttt{node}
+    \State \texttt{prev} $\gets$ \textsc{prevElementSibling}(\texttt{node})
     \State \Return \texttt{prev != nil AND Match(prev, left)}
-    \EndIf
-    \If{ada operator \texttt{" \textasciitilde{} "} pada \texttt{selector}}
-    \State pecah menjadi \texttt{left} dan \texttt{right}
+    \ElsIf{\texttt{op = "\textasciitilde{}"}}
     \If{\texttt{MatchSelector(node, right)} = false}
     \State \Return \texttt{false}
     \EndIf
-    \State \Return ada sibling sebelumnya yang memenuhi \texttt{Match(sibling, left)}
+    \State \Return \textsc{hasPrevSibling}(\texttt{node, left})
     \EndIf
-    \If{selector mengandung spasi tanpa operator lain}
-    \State pecah jadi \texttt{left} (ancestor pattern) dan \texttt{right} (node pattern)
+    \EndIf
+
+    \State \texttt{parts} $\gets$ split spasi dari \texttt{selector}
+    \If{jumlah \texttt{parts} $>$ 1 \textbf{dan} tidak ada token \texttt{>}, \texttt{+}, \texttt{\textasciitilde{}} di dalamnya}
+    \State \texttt{right} $\gets$ token terakhir
+    \State \texttt{left} $\gets$ gabungan token sebelum terakhir
     \If{\texttt{MatchSelector(node, right)} = false}
     \State \Return \texttt{false}
     \EndIf
-    \State \Return ada ancestor yang memenuhi \texttt{Match(ancestor, left)}
+    \State \Return \textsc{hasAncestor}(\texttt{node, left})
     \EndIf
+
     \State \Return \texttt{MatchSelector(node, selector)}
 \end{ieeealgorithm}
 
@@ -314,7 +356,7 @@ Contoh berikut memperlihatkan satu file HTML sederhana dan beberapa selector leg
 
 Pada file tersebut, selector \texttt{article} menghasilkan dua node karena ada dua elemen \texttt{article}. Selector \texttt{.card} juga menghasilkan dua node karena kedua \texttt{article} memiliki class \texttt{card}. Selector \texttt{\#news} hanya menghasilkan satu node, yaitu elemen \texttt{section} yang memiliki id tersebut. Selector relasional \texttt{section > article} menghasilkan dua node karena kedua \texttt{article} adalah child langsung dari \texttt{section}. Selector \texttt{section article} juga menghasilkan dua node, tetapi mekanisme pencariannya berbasis relasi ancestor-descendant. Selector \texttt{article > p} menghasilkan satu node, yaitu \texttt{p} dengan class \texttt{lead}, sedangkan selector \texttt{article + p} dan \texttt{article \textasciitilde{} p} sama-sama menghasilkan satu node \texttt{p} terakhir karena node tersebut berada sesudah elemen \texttt{article} sebagai sibling pada parent yang sama.
 
-Sebagai pembanding, jika pada file yang sama digunakan selector tidak legal seperti \texttt{article.card} atau \texttt{p:first-child}, implementasi saat ini tidak memiliki parser khusus untuk bentuk tersebut sehingga hasilnya cenderung kosong. Oleh karena itu, untuk memperoleh hasil yang konsisten, pengguna harus menyusun query menggunakan bentuk selector yang memang didukung oleh modul selector.
+Sebagai pembanding, jika pada file yang sama digunakan selector tidak legal seperti \texttt{p:first-child}, \texttt{article, p}, atau \texttt{[href\textasciicircum{}="https"]}, implementasi saat ini tidak memiliki parser khusus untuk bentuk tersebut sehingga hasilnya cenderung kosong. Oleh karena itu, untuk memperoleh hasil yang konsisten, pengguna harus menyusun query menggunakan bentuk selector yang memang didukung oleh modul selector.
 
 \section{Traversal}
 
@@ -361,12 +403,11 @@ Selain urutan eksplorasi, traversal juga menangani metrik dan kondisi berhenti d
     \If{\texttt{shouldStop}}
     \State \textbf{break}
     \EndIf
-    \For{setiap \texttt{child} dari \texttt{current.node.Children} dalam urutan asli}
-    \State bentuk \texttt{childPath} dan \texttt{pathFromTop}
-    \State append item anak ke belakang \texttt{queue}
+    \For{setiap child dari \texttt{current.node} dalam urutan kiri-ke-kanan}
+    \State hitung \texttt{childPath} dan enqueue child
     \EndFor
     \EndWhile
-    \State \texttt{res.durationMs} $\gets$ selisih waktu sekarang dengan \texttt{startTime}
+    \State \texttt{res.durationMs} $\gets$ selisih waktu dari \texttt{startTime}
     \State \Return \texttt{res}
 \end{ieeealgorithm}
 
@@ -376,45 +417,39 @@ Selain urutan eksplorasi, traversal juga menangani metrik dan kondisi berhenti d
     \State inisialisasi \texttt{res}, catat \texttt{startTime}
     \State \texttt{stack} $\gets$ [root dengan \texttt{nodePath = "0"}]
     \While{\texttt{stack} tidak kosong}
-    \State \texttt{current} $\gets$ pop-top dari \texttt{stack}
+    \State \texttt{current} $\gets$ pop-back dari \texttt{stack}
     \State \texttt{matched, shouldStop} $\gets$ \textsc{processVisit}(\texttt{res, current, req})
     \If{\texttt{shouldStop}}
     \State \textbf{break}
     \EndIf
-    \For{indeks anak \texttt{i} dari kanan ke kiri}
-    \State bentuk \texttt{childPath} dan \texttt{pathFromTop}
-    \State push item anak ke \texttt{stack}
+    \For{setiap child dari \texttt{current.node} dalam urutan kanan-ke-kiri}
+    \State hitung \texttt{childPath} dan push child ke \texttt{stack}
     \EndFor
     \EndWhile
-    \State \texttt{res.durationMs} $\gets$ selisih waktu sekarang dengan \texttt{startTime}
+    \State \texttt{res.durationMs} $\gets$ selisih waktu dari \texttt{startTime}
     \State \Return \texttt{res}
 \end{ieeealgorithm}
 
 \begin{ieeealgorithm}{processVisit}
     \Require \texttt{res}, \texttt{current}, \texttt{req}
-    \Ensure \texttt{(matched, shouldStop)}
-    \State \texttt{res.visitedCount} $\gets$ \texttt{res.visitedCount + 1}
-    \State perbarui \texttt{res.maxDepthVisited} jika depth node saat ini lebih besar
+    \Ensure \texttt{matched}, \texttt{shouldStop}
+    \State naikkan \texttt{res.VisitedCount}
+    \State perbarui \texttt{res.MaxDepthVisited} bila perlu
     \State \texttt{matched} $\gets$ \textsc{Match}(\texttt{current.node}, \texttt{req.selector})
     \If{\texttt{matched}}
-    \State bentuk \texttt{MatchHit} dan append ke \texttt{res.matches}
-    \If{\texttt{req.includePathToMatch}}
-    \State salin \texttt{pathFromTop} ke \texttt{hit.pathFromRoot}
+    \State tambahkan node ke \texttt{res.Matches}
     \EndIf
+    \If{\texttt{req.IncludeTraversalLog}}
+    \State tambahkan event kunjungan ke \texttt{res.TraversalLog}
     \EndIf
-    \If{\texttt{req.includeTraversalLog}}
-    \State append \texttt{VisitEvent} ke \texttt{res.traversalLog}
+    \If{\texttt{req.limit > 0} dan jumlah match $\geq$ limit}
+    \State set \texttt{res.StoppedByLimit = true}
+    \State \Return \texttt{matched, true}
     \EndIf
-    \If{\texttt{req.limit > 0} \textbf{and} jumlah match $\geq$ limit}
-    \State \texttt{res.stoppedByLimit} $\gets$ \texttt{true}
-    \State \Return \texttt{(matched, true)}
-    \EndIf
-    \State \Return \texttt{(matched, false)}
+    \State \Return \texttt{matched, false}
 \end{ieeealgorithm}
 
-\subsection{Contoh Traversal pada Pohon DOM}
-
-Contoh berikut menggunakan struktur DOM yang sama dengan section Selector agar perbandingan BFS dan DFS mudah diamati.
+\subsection{Contoh Traversal BFS dan DFS}
 
 \begin{tcblisting}{
         breakable,
