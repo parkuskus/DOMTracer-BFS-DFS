@@ -182,17 +182,17 @@ State form dikirim ke fungsi \texttt{runTraversal} pada \texttt{frontend/src/api
 
 \subsection{Integrasi API}
 
-Modul \texttt{api.ts} menggunakan environment variable \texttt{VITE\_API\_BASE\_URL}; jika tidak tersedia, default-nya adalah \texttt{http://localhost:8080}. Fungsi \texttt{runTraversal} mengirim request ke \texttt{/api/traverse}. Jika backend tidak dapat dihubungi, frontend menampilkan pesan error agar pengguna mengetahui bahwa server perlu dijalankan.
+Modul \texttt{api.ts} menggunakan environment variable \texttt{VITE\_API\_BASE\_URL}. Pada mode pengembangan, nilai ini dapat dikosongkan karena Vite melakukan proxy untuk seluruh request \texttt{/api/*} dari frontend menuju backend pada \texttt{http://localhost:8080}. Dengan konfigurasi ini, frontend berjalan pada \texttt{http://localhost:5173}, sedangkan backend tetap berjalan pada port \texttt{8080}. Fungsi \texttt{runTraversal} mengirim request ke \texttt{/api/traverse}. Jika backend tidak dapat dihubungi, frontend menampilkan pesan error agar pengguna mengetahui bahwa server perlu dijalankan.
 
 Tipe data response didefinisikan pada \texttt{frontend/src/types.ts}. Interface \texttt{ApiResponse} berisi \texttt{tree}, \texttt{traversalLog}, \texttt{metrics}, \texttt{algorithm}, dan \texttt{selector}. Shape ini disamakan dengan response dari \texttt{backend/main.go}.
 
 \subsection{Visualisasi Pohon dan Log}
 
-Komponen \texttt{TreeGraph.tsx} menampilkan DOM sebagai graf SVG. Layout pohon dihitung berdasarkan jumlah leaf pada setiap subtree. Setiap node memiliki koordinat \texttt{x} dan \texttt{y}, lalu edge digambar sebagai kurva antar parent dan child. Node yang cocok dengan selector diberi warna berbeda melalui field \texttt{isMatched}.
+Komponen \texttt{TreeGraph.tsx} menampilkan DOM sebagai graf SVG. Layout pohon dihitung berdasarkan jumlah leaf pada setiap subtree. Setiap node memiliki koordinat \texttt{x} dan \texttt{y}, lalu edge digambar sebagai kurva antar parent dan child. Node yang cocok dengan selector diberi warna berbeda melalui field \texttt{isMatched}. Komponen ini juga menggunakan \texttt{traversalLog} untuk menjalankan animasi penelusuran. Pada saat animasi berjalan, node yang sedang dikunjungi diberi warna hijau terang, sedangkan setelah animasi selesai node match kembali ditampilkan dengan warna biru. Pengguna dapat menjalankan, menghentikan, melakukan step, melewati animasi, mengatur kecepatan, memperbesar atau memperkecil graf, serta membuka graf dalam mode fullscreen.
 
 Komponen \texttt{TreeNode.tsx} menampilkan struktur DOM dalam bentuk tree view yang dapat dibuka dan ditutup. Node yang sudah dikunjungi diberi style berbeda melalui \texttt{isTraversed}, sedangkan node yang cocok diberi penanda match. Komponen ini juga menampilkan sebagian atribut dan potongan teks node.
 
-Komponen \texttt{TraversalLog.tsx} menampilkan setiap langkah traversal. Log berisi nomor step, tag node, path node, pesan kunjungan, dan status match. Komponen ini juga menyediakan filter untuk menampilkan hanya node yang match.
+Komponen \texttt{TraversalLog.tsx} menampilkan setiap langkah traversal pada tab terpisah. Log berisi nomor step, tag node, path node, pesan kunjungan, dan status match. Komponen ini juga menyediakan filter untuk menampilkan hanya node yang match.
 
 \subsection{Panel Metrik}
 
@@ -227,8 +227,10 @@ Frontend dapat dijalankan dari direktori \texttt{frontend} dengan perintah berik
         top=1mm,
         bottom=1mm
     }
-    bun run dev
+    npm run dev
 \end{tcblisting}
+
+Setelah frontend berjalan, aplikasi dapat diakses melalui \texttt{http://localhost:5173}. Request API dari frontend akan diteruskan oleh proxy Vite ke backend pada \texttt{http://localhost:8080}. Konfigurasi ini mencegah bentrok port antara server frontend dan server backend.
 
 Apabila ingin menjalankan server alternatif yang menyediakan endpoint \texttt{/api/scrape} dan \texttt{/api/tree}, perintah yang digunakan adalah sebagai berikut.
 
@@ -245,160 +247,174 @@ Apabila ingin menjalankan server alternatif yang menyediakan endpoint \texttt{/a
     go run ./cmd/server/main.go
 \end{tcblisting}
 
-\section{Rencana dan Template Pengujian}
+\section{Pengujian Penelusuran Node dan CSS Selector}
 
-Pengujian akhir belum dilakukan pada tahap penulisan laporan ini. Oleh karena itu, bagian ini disiapkan sebagai template pengujian yang dapat langsung dilengkapi setelah eksperimen dijalankan. Pengujian dirancang untuk mencakup unit test backend, integrasi API, validasi frontend, dan perbandingan BFS/DFS.
+Pengujian dilakukan menggunakan berkas HTML pada direktori \texttt{test/cases} dan keluaran acuan pada direktori \texttt{test/expected}. Setiap test case dijalankan melalui aplikasi DOMTracer, kemudian hasil visualisasi disimpan sebagai gambar PNG pada direktori \texttt{docs/output}. Fokus pengujian hanya mencakup penelusuran node DOM dan pencocokan CSS selector. Pengujian API, backend secara terpisah, dan frontend secara terpisah tidak dibahas pada bagian ini.
 
-\subsection{Perintah Pengujian}
+Seluruh hasil pengujian sesuai dengan expected output. Kesesuaian dinilai dari jumlah node yang cocok, jumlah node yang dikunjungi, kedalaman maksimum, status berhenti karena limit, serta perilaku error untuk input yang memang dirancang gagal.
 
-\begin{tcblisting}{
-        colback=gray!3,
-        colframe=black!60,
-        title=Template Perintah Pengujian Backend,
-        listing only,
-        left=1mm,
-        right=1mm,
-        top=1mm,
-        bottom=1mm
-    }
-    cd backend
-    go test ./src/parser -v
-    go test ./src/selector -v
-    go test ./src/traversal -v
-    go test ./... -v
-\end{tcblisting}
+Secara teknis, setiap test case mengikuti pipeline yang sama. Pertama, file HTML dibaca sebagai input dan diparse menjadi pohon DOM. Kedua, traversal BFS atau DFS dijalankan sesuai spesifikasi test case. Ketiga, pada setiap node yang dikunjungi, sistem mengevaluasi CSS selector menggunakan modul selector. Keempat, sistem mencatat metrik traversal berupa jumlah node yang dikunjungi, jumlah node yang cocok, kedalaman maksimum yang dicapai, dan status \textit{stopped by limit}. Nilai-nilai tersebut kemudian dibandingkan dengan file expected JSON yang bersesuaian. Screenshot pada kolom hasil real menunjukkan kondisi aplikasi setelah test dijalankan. Untuk \texttt{case\_11}, gambar graph dan log dicantumkan bersama karena dokumen HTML berukuran lebih besar sehingga validasi visual struktur graf dan urutan traversal log sama-sama relevan.
 
-\begin{tcblisting}{
-        colback=gray!3,
-        colframe=black!60,
-        title=Template Perintah Pengujian Frontend,
-        listing only,
-        left=1mm,
-        right=1mm,
-        top=1mm,
-        bottom=1mm
-    }
-    cd frontend
-    bun run lint
-    bun run test
-    bun run build
-\end{tcblisting}
+Kolom expected pada tabel merangkum nilai acuan dari direktori \texttt{test/expected}. Kolom spesifikasi tes berisi algoritma, CSS selector, dan limit node yang digunakan. Baris hasil real menampilkan screenshot aktual dari direktori \texttt{docs/output}, sedangkan penjelasan singkat menerangkan aspek teknis yang divalidasi oleh test case tersebut.
 
-\subsection{Template Unit Test Backend}
-
-\begin{table}[H]
+\renewcommand{\arraystretch}{1.15}
+\newcommand{\hasilGraph}[2]{%
+\multicolumn{3}{|p{0.94\textwidth}|}{%
+\begin{minipage}{0.93\textwidth}
 \centering
-\scriptsize
-\begin{tabular}{|p{0.05\textwidth}|p{0.20\textwidth}|p{0.27\textwidth}|p{0.22\textwidth}|p{0.14\textwidth}|}
-    \hline
-    \textbf{No.} & \textbf{Modul} & \textbf{Skenario} & \textbf{Ekspektasi} & \textbf{Status} \\
-    \hline
-    1 & Parser & Parsing HTML sederhana dengan tag bertingkat. & Root, child, depth, dan atribut terbentuk benar. & TBD \\
-    \hline
-    2 & Parser & Parsing tag kosong seperti \texttt{img} dan \texttt{br}. & Tag kosong menjadi node tanpa mengganggu stack parent. & TBD \\
-    \hline
-    3 & Selector & Tag, class, id, dan universal selector. & \texttt{MatchSelector} mengembalikan boolean sesuai selector. & TBD \\
-    \hline
-    4 & Selector & Combinator \texttt{>}, spasi, \texttt{+}, dan \texttt{\textasciitilde{}}. & \texttt{Match} mengenali relasi parent, ancestor, dan sibling. & TBD \\
-    \hline
-    5 & Traversal & BFS tanpa limit. & Node dikunjungi per level dan semua match ditemukan. & TBD \\
-    \hline
-    6 & Traversal & DFS tanpa limit. & Node dikunjungi mendalam dengan urutan sibling kiri-ke-kanan. & TBD \\
-    \hline
-    7 & Traversal & Top-$N$ dengan limit positif. & Traversal berhenti saat jumlah match mencapai limit. & TBD \\
-    \hline
-    8 & Traversal & Selector kosong atau algoritma tidak valid. & Fungsi mengembalikan error yang sesuai. & TBD \\
-    \hline
-\end{tabular}
-\end{table}
-
-\subsection{Template Pengujian API}
-
-\begin{table}[H]
+\includegraphics[width=0.88\textwidth]{#1}
+\par\smallskip
+\raggedright\textbf{Penjelasan:} #2
+\end{minipage}}\\
+\hline}
+\newcommand{\hasilGraphLog}[3]{%
+\multicolumn{3}{|p{0.94\textwidth}|}{%
+\begin{minipage}{0.93\textwidth}
 \centering
-\scriptsize
-\begin{tabular}{|p{0.05\textwidth}|p{0.20\textwidth}|p{0.25\textwidth}|p{0.22\textwidth}|p{0.14\textwidth}|}
-    \hline
-    \textbf{No.} & \textbf{Endpoint} & \textbf{Input} & \textbf{Ekspektasi} & \textbf{Status} \\
-    \hline
-    1 & \texttt{GET /api/health} & Tidak ada body. & Response status OK dan JSON \texttt{status}. & TBD \\
-    \hline
-    2 & \texttt{POST /api/traverse} & URL valid, selector \texttt{a}, algoritma BFS. & Response berisi tree, log, metrik, algoritma, dan selector. & TBD \\
-    \hline
-    3 & \texttt{POST /api/traverse} & Raw HTML, selector \texttt{.card}, algoritma DFS. & Response memiliki match sesuai class pada HTML. & TBD \\
-    \hline
-    4 & \texttt{POST /api/traverse} & Input kosong. & Response error validasi. & TBD \\
-    \hline
-    5 & \texttt{POST /api/traverse} & Selector kosong. & Response error validasi. & TBD \\
-    \hline
-    6 & \texttt{POST /api/traverse} & Algoritma selain BFS/DFS. & Response error dari \texttt{SearchDOM}. & TBD \\
-    \hline
-\end{tabular}
-\end{table}
+\textbf{Graph}\par
+\includegraphics[width=0.88\textwidth]{#1}
+\par\smallskip
+\textbf{Log}\par
+\includegraphics[width=0.88\textwidth]{#2}
+\par\smallskip
+\raggedright\textbf{Penjelasan:} #3
+\end{minipage}}\\
+\hline}
+\newcommand{\hasilError}[1]{%
+\multicolumn{3}{|p{0.94\textwidth}|}{%
+\begin{minipage}{0.93\textwidth}
+\raggedright\textbf{Hasil Real:} Keluaran berupa error validasi sehingga tidak ada visualisasi graph. \par\smallskip
+\textbf{Penjelasan:} #1
+\end{minipage}}\\
+\hline}
 
-\subsection{Template Pengujian Fungsional Frontend}
+\begin{longtable}{|>{\raggedright\arraybackslash}p{0.22\textwidth}|>{\raggedright\arraybackslash}p{0.31\textwidth}|>{\raggedright\arraybackslash}p{0.33\textwidth}|}
+\caption{Hasil pengujian penelusuran node DOM dan CSS selector.}\\
+\hline
+\textbf{Testcase} & \textbf{Spesifikasi Tes} & \textbf{Expected} \\
+\hline
+\endfirsthead
+\endhead
 
-\begin{table}[H]
-\centering
-\scriptsize
-\begin{tabular}{|p{0.05\textwidth}|p{0.24\textwidth}|p{0.34\textwidth}|p{0.20\textwidth}|}
-    \hline
-    \textbf{No.} & \textbf{Fitur} & \textbf{Ekspektasi} & \textbf{Status} \\
-    \hline
-    1 & Health check backend & Status backend berubah menjadi online ketika \texttt{/api/health} dapat diakses. & TBD \\
-    \hline
-    2 & Input URL & Form mengirim URL ke backend dan menampilkan hasil traversal. & TBD \\
-    \hline
-    3 & Input raw HTML & Form mengirim string HTML sebagai mode \texttt{html}. & TBD \\
-    \hline
-    4 & Input file HTML & Isi file dibaca dengan \texttt{FileReader} dan dikirim sebagai HTML. & TBD \\
-    \hline
-    5 & Tab Graph & Pohon DOM tampil sebagai SVG dan node match ter-highlight. & TBD \\
-    \hline
-    6 & Tab Tree & Struktur DOM dapat diekspansi dan node match terlihat. & TBD \\
-    \hline
-    7 & Tab Log & Log traversal tampil sesuai urutan step dan dapat difilter match. & TBD \\
-    \hline
-    8 & Error handling & Pesan error muncul saat backend offline atau input tidak valid. & TBD \\
-    \hline
-\end{tabular}
-\end{table}
+\texttt{case\_1.html} &
+Algoritma: BFS\newline
+CSS selector: \texttt{article}\newline
+Limit node: semua &
+2 match, 5 node dikunjungi, kedalaman maksimum 3, tidak berhenti karena limit. \\
+\hline
+\hasilGraph{output/no1.png}{Tag selector dievaluasi dengan membandingkan nilai \texttt{node.Tag} terhadap selector \texttt{article}. Traversal BFS mengunjungi node per level, lalu menandai dua node \texttt{article} sebagai match tanpa memicu kondisi berhenti dini.}
 
-\subsection{Template Hasil Eksperimen BFS dan DFS}
+\texttt{case\_2.html} &
+Algoritma: BFS\newline
+CSS selector: \texttt{img + p}\newline
+Limit node: semua &
+1 match, 5 node dikunjungi, kedalaman maksimum 3, tidak berhenti karena limit. \\
+\hline
+\hasilGraph{output/no2.png}{Selector \texttt{img + p} memvalidasi relasi sibling langsung. Saat node \texttt{p} dikunjungi, modul selector memeriksa sibling sebelumnya pada parent yang sama dan memastikan node tersebut adalah \texttt{img}.}
 
-Tabel berikut dapat digunakan untuk mencatat perbandingan BFS dan DFS pada dokumen HTML yang sama. Kolom hasil diisi setelah pengujian dijalankan.
+\texttt{case\_3.html} &
+Algoritma: DFS\newline
+CSS selector: \texttt{.entry}\newline
+Limit node: 2 &
+2 match, 5 node dikunjungi, kedalaman maksimum 3, berhenti karena Top-$N$. \\
+\hline
+\hasilGraph{output/no3.png}{Class selector membaca atribut \texttt{class}, memecahnya menjadi token dengan pemisah spasi, lalu mencari token \texttt{entry}. Karena limit Top-$N$ bernilai 2, DFS berhenti segera setelah match kedua ditemukan dan field \texttt{stoppedByLimit} bernilai benar.}
 
-\begin{table}[H]
-\centering
-\scriptsize
-\begin{tabular}{|p{0.06\textwidth}|p{0.18\textwidth}|p{0.16\textwidth}|p{0.12\textwidth}|p{0.12\textwidth}|p{0.12\textwidth}|p{0.12\textwidth}|}
-    \hline
-    \textbf{No.} & \textbf{Input} & \textbf{Selector} & \textbf{Algo} & \textbf{Visited} & \textbf{Match} & \textbf{Time} \\
-    \hline
-    1 & \texttt{test/cases/case\_1.html} & \texttt{article} & BFS & TBD & TBD & TBD \\
-    \hline
-    2 & \texttt{test/cases/case\_1.html} & \texttt{article} & DFS & TBD & TBD & TBD \\
-    \hline
-    3 & \texttt{test/cases/case\_2.html} & \texttt{.card} & BFS & TBD & TBD & TBD \\
-    \hline
-    4 & \texttt{test/cases/case\_2.html} & \texttt{.card} & DFS & TBD & TBD & TBD \\
-    \hline
-    5 & URL publik & \texttt{a} & BFS & TBD & TBD & TBD \\
-    \hline
-    6 & URL publik & \texttt{a} & DFS & TBD & TBD & TBD \\
-    \hline
-\end{tabular}
-\end{table}
+\texttt{case\_4.html} &
+Algoritma: BFS\newline
+CSS selector: \texttt{*}\newline
+Limit node: semua &
+Menghasilkan error \texttt{empty document}. \\
+\hline
+\hasilGraph{output/no4.png}{Kasus ini menguji validasi parser sebelum traversal. Karena tokenizer tidak menghasilkan root DOM yang valid, backend mengembalikan error \texttt{empty document}; akibatnya modul BFS/DFS dan selector matching tidak dijalankan.}
 
-\subsection{Placeholder Analisis Hasil}
+\texttt{case\_5.html} &
+Algoritma: BFS\newline
+CSS selector: \texttt{.featured}\newline
+Limit node: semua &
+1 match, 3 node dikunjungi, kedalaman maksimum 2, tidak berhenti karena limit. \\
+\hline
+\hasilGraph{output/no5.png}{Kasus ini memastikan normalisasi atribut berjalan benar. Nilai atribut \texttt{class} yang memiliki spasi berlebih tetap diproses menggunakan token class utuh, sehingga \texttt{.featured} hanya cocok pada node yang benar.}
 
-Setelah pengujian dilakukan, analisis dapat diisi dengan poin berikut:
+\texttt{case\_6.html} &
+Algoritma: BFS\newline
+CSS selector: \texttt{img + p}\newline
+Limit node: semua &
+0 match, 5 node dikunjungi, kedalaman maksimum 3, tidak berhenti karena limit. \\
+\hline
+\hasilGraph{output/no6.png}{Selector \texttt{img + p} sengaja diuji pada struktur sibling yang tidak memenuhi urutan. Meskipun semua node dikunjungi, pengecekan sibling sebelumnya untuk setiap kandidat \texttt{p} tidak menemukan \texttt{img}, sehingga jumlah match tetap nol.}
 
-\begin{itemize}
-    \item Apakah BFS dan DFS menghasilkan jumlah match yang sama untuk selector tanpa limit.
-    \item Perbedaan urutan match antara BFS dan DFS berdasarkan traversal log.
-    \item Pengaruh Top-$N$ terhadap jumlah node yang dikunjungi.
-    \item Perbedaan waktu eksekusi pada dokumen kecil dan dokumen besar.
-    \item Kasus selector yang tidak didukung dan bagaimana aplikasi menampilkan hasilnya.
-    \item Kesesuaian visualisasi frontend terhadap hasil traversal backend.
-\end{itemize}
+\texttt{case\_7.html} &
+Algoritma: BFS\newline
+CSS selector: \texttt{div, p}\newline
+Limit node: semua &
+0 match, 4 node dikunjungi, kedalaman maksimum 2, tidak berhenti karena limit. \\
+\hline
+\hasilGraph{output/no7.png}{Input \texttt{div, p} merepresentasikan selector list CSS. Bentuk ini belum diparse sebagai dua selector terpisah oleh implementasi, sehingga string selector diperlakukan sebagai pola yang tidak cocok dengan node mana pun.}
+
+\texttt{case\_8.html} &
+Algoritma: DFS\newline
+CSS selector: \texttt{*}\newline
+Limit node: semua &
+4 match, 4 node dikunjungi, kedalaman maksimum 3, tidak berhenti karena limit. \\
+\hline
+\hasilGraph{output/no8.png}{Kasus ini menguji toleransi parser terhadap HTML yang tidak tertutup sempurna. Stack parser tetap mampu membentuk struktur DOM, kemudian universal selector \texttt{*} mengembalikan match untuk setiap node yang dikunjungi DFS.}
+
+\texttt{case\_9.html} &
+Algoritma: DFS\newline
+CSS selector: \texttt{.entry}\newline
+Limit node: 10 &
+2 match, 5 node dikunjungi, kedalaman maksimum 3, tidak berhenti karena limit. \\
+\hline
+\hasilGraph{output/no9.png}{Limit Top-$N$ bernilai 10, tetapi jumlah match aktual hanya 2. Karena kondisi berhenti hanya aktif ketika jumlah match mencapai limit, DFS tetap menelusuri seluruh node sampai stack kosong dan \texttt{stoppedByLimit} tetap salah.}
+
+\texttt{case\_10.html} &
+Algoritma: \texttt{RANDOM}\newline
+CSS selector: \texttt{article}\newline
+Limit node: semua &
+Menghasilkan error yang memuat pesan \texttt{unsupported algorithm}. \\
+\hline
+\hasilError{Validasi parameter algoritma dilakukan sebelum traversal dimulai. Nilai \texttt{RANDOM} tidak termasuk pilihan legal, sehingga sistem mengembalikan error \texttt{unsupported algorithm} tanpa membentuk hasil graph.}
+
+\texttt{case\_11.html} (11a) &
+Algoritma: BFS\newline
+CSS selector: \texttt{article}\newline
+Limit node: semua &
+20 match, 541 node dikunjungi, kedalaman maksimum 13, tidak berhenti karena limit. \\
+\hline
+\hasilGraphLog{output/no11a.png}{output/no11a-log.png}{Pada dokumen besar, tag selector \texttt{article} menemukan seluruh elemen produk pada halaman Books to Scrape. Log menunjukkan BFS tetap mengunjungi seluruh 541 node karena tidak ada limit, sedangkan graph menampilkan posisi match di dalam struktur DOM yang dalam.}
+
+\texttt{case\_11.html} (11a2) &
+Algoritma: BFS\newline
+CSS selector: \texttt{h3 a}\newline
+Limit node: semua &
+20 match, 541 node dikunjungi, kedalaman maksimum 13, tidak berhenti karena limit. \\
+\hline
+\hasilGraphLog{output/no11a2.png}{output/no11a2-log.png}{Selector \texttt{h3 a} menguji descendant combinator pada dokumen besar. Untuk setiap kandidat \texttt{a}, modul selector menelusuri ancestor sampai menemukan \texttt{h3}, sehingga seluruh tautan judul buku terdeteksi sebagai match.}
+
+\texttt{case\_11.html} (11a3) &
+Algoritma: DFS\newline
+CSS selector: \texttt{.price\_color}\newline
+Limit node: 5 &
+5 match, 239 node dikunjungi, kedalaman maksimum 13, berhenti karena Top-$N$. \\
+\hline
+\hasilGraphLog{output/no11a3.png}{output/no11a3-log.png}{Class selector \texttt{.price\_color} diuji dengan DFS dan limit 5. Urutan pre-order DFS menyebabkan traversal masuk ke subtree produk secara mendalam, lalu berhenti saat match kelima ditemukan setelah 239 node dikunjungi.}
+
+\texttt{case\_11.html} (11b) &
+Algoritma: BFS\newline
+CSS selector: \texttt{.star-rating}\newline
+Limit node: semua &
+20 match, 541 node dikunjungi, kedalaman maksimum 13, tidak berhenti karena limit. \\
+\hline
+\hasilGraphLog{output/no11b.png}{output/no11b-log.png}{Selector \texttt{.star-rating} memvalidasi pencocokan class pada banyak node dengan atribut class gabungan. Karena limit tidak diaktifkan, BFS menyelesaikan traversal seluruh dokumen dan menghasilkan 20 match sesuai expected.}
+
+\texttt{case\_11.html} (11c) &
+Algoritma: DFS\newline
+CSS selector: \texttt{.btn}\newline
+Limit node: semua &
+20 match, 541 node dikunjungi, kedalaman maksimum 13, tidak berhenti karena limit. \\
+\hline
+\hasilGraphLog{output/no11c.png}{output/no11c-log.png}{Selector \texttt{.btn} dijalankan dengan DFS tanpa limit pada dokumen besar. Hasil ini menunjukkan bahwa meskipun urutan kunjungan DFS berbeda dari BFS, jumlah match akhir tetap sama ketika seluruh node selesai ditelusuri.}
+\end{longtable}
+
+Berdasarkan tabel pengujian, implementasi mampu menangani selector dasar, combinator, selector yang tidak didukung, HTML kosong, HTML tidak sempurna, serta limit Top-$N$. Pada kasus tanpa limit, traversal mengunjungi seluruh node yang relevan dan jumlah match sesuai expected. Pada kasus Top-$N$, traversal berhenti hanya ketika jumlah match telah mencapai batas yang diberikan.
