@@ -1,6 +1,7 @@
 package traversal
 
 import (
+	"os"
 	"testing"
 
 	"github.com/parkuskus/Tubes2_nama_kelompok/src/parser"
@@ -17,6 +18,38 @@ func scrapedTree(t *testing.T) *parser.Node {
 		t.Fatal("scraper returned nil root")
 	}
 	return root
+}
+
+func TestLocal_MultiClassSelector_Case15(t *testing.T) {
+	raw, err := os.ReadFile("../../../test/cases/case_15.html")
+	if err != nil {
+		t.Fatalf("failed to read case_15.html: %v", err)
+	}
+
+	root, err := parser.ParseHTML(string(raw))
+	if err != nil {
+		t.Fatalf("failed to parse case_15.html: %v", err)
+	}
+
+	res, err := SearchDOM(root, SearchRequest{
+		Selector:  ".highlight.btn",
+		Algorithm: AlgorithmBFS,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(res.Matches) != 2 {
+		t.Fatalf("expected 2 .highlight.btn matches, got %d", len(res.Matches))
+	}
+
+	got := []string{res.Matches[0].Tag, res.Matches[1].Tag}
+	want := []string{"div", "span"}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("match %d tag = %q, want %q", i, got[i], want[i])
+		}
+	}
 }
 
 // --- TAG SELECTOR ---

@@ -439,6 +439,14 @@ Limit node: semua &
 1 match, elemen \texttt{div} dengan \texttt{id="special"}, kedalaman maksimum 3, tidak berhenti karena limit. \\
 \hline
 \hasilGraph{output/no14.png}{ID selector memeriksa atribut \texttt{id} secara langsung dan hanya mencocokkan node dengan nilai \texttt{special}. Elemen \texttt{div} yang juga memiliki class \texttt{highlight btn} menjadi satu-satunya match; elemen tanpa atribut \texttt{id} dan elemen dengan \texttt{id="other"} tidak ikut dipilih. Tampilan aplikasi menghitung elemen \texttt{meta} sebagai node visual tambahan, tetapi hasil match selector tetap sesuai expected.}
+
+\texttt{case\_15.html} &
+Algoritma: BFS\newline
+CSS selector: \texttt{.highlight.btn}\newline
+Limit node: semua &
+2 match, elemen dengan class \texttt{highlight} dan \texttt{btn}, kedalaman maksimum 3, tidak berhenti karena limit. \\
+\hline
+\hasilGraph{output/no15.png}{Multi-class selector \texttt{.highlight.btn} mensyaratkan seluruh class pada selector terpenuhi oleh node yang sama. Elemen \texttt{div} dengan \texttt{class="highlight btn"} dan elemen \texttt{span} dengan \texttt{class="btn highlight extra"} cocok karena keduanya memiliki class \texttt{highlight} dan \texttt{btn}, walaupun urutan class berbeda dan elemen \texttt{span} memiliki class tambahan. Elemen yang hanya memiliki salah satu class, seperti \texttt{button.btn}, \texttt{a.btn}, atau \texttt{div.highlight}, tidak dianggap match. Tampilan aplikasi mengunjungi 13 node karena elemen \texttt{meta} ikut divisualisasikan, sedangkan expected testcase menghitung 12 elemen utama; jumlah match selector tetap sesuai expected.}
 \end{longtable}
 
 Berdasarkan tabel pengujian, implementasi mampu menangani selector dasar, combinator, selector yang tidak didukung, HTML kosong, HTML tidak sempurna, serta limit Top-$N$. Pada kasus tanpa limit, traversal mengunjungi seluruh node yang relevan dan jumlah match sesuai expected. Pada kasus Top-$N$, traversal berhenti hanya ketika jumlah match telah mencapai batas yang diberikan.
