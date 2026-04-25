@@ -89,6 +89,7 @@ export default function TreeGraph({ root, logs = [] }: Props) {
     [logs, currentLogIndex],
   );
   const progress = logs.length > 0 ? ((currentLogIndex + 1) / logs.length) * 100 : 0;
+  const isAnimationComplete = logs.length > 0 && currentLogIndex >= logs.length - 1 && !isPlaying;
   const zoomPercent = Math.round(zoom * 100);
 
   useEffect(() => {
@@ -314,7 +315,7 @@ export default function TreeGraph({ root, logs = [] }: Props) {
             {eds.map(([a, b], i) => {
               const targetX = a.x === b.x ? b.x + 0.1 : b.x;
               const isChildVisited = visitedNodeIds.has(b.node.nodeId);
-              const isChildCurrent = currentLog?.nodeId === b.node.nodeId;
+              const isChildCurrent = !isAnimationComplete && currentLog?.nodeId === b.node.nodeId;
 
               return (
                 <path
@@ -339,7 +340,7 @@ export default function TreeGraph({ root, logs = [] }: Props) {
               const isHover = hover === p.node.nodeId;
               const isMatch = p.node.isMatched;
               const isVisited = visitedNodeIds.has(p.node.nodeId);
-              const isCurrent = currentLog?.nodeId === p.node.nodeId;
+              const isCurrent = !isAnimationComplete && currentLog?.nodeId === p.node.nodeId;
               const isRevealedMatch = isVisited && isMatch;
 
               return (
