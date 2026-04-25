@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import type { LogEntry, TreeNode } from "../src/types";
 import {
+  FastForward,
   Maximize2,
   Minimize2,
   Pause,
@@ -159,6 +160,11 @@ export default function TreeGraph({ root, logs = [] }: Props) {
     setCurrentLogIndex((index) => Math.min(logs.length - 1, index + 1));
   }
 
+  function skipAnimation() {
+    setIsPlaying(false);
+    setCurrentLogIndex(logs.length - 1);
+  }
+
   const containerClass = [
     "glass overflow-hidden",
     isFullscreen
@@ -201,6 +207,16 @@ export default function TreeGraph({ root, logs = [] }: Props) {
             title="Next step"
           >
             <StepForward className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={skipAnimation}
+            className="h-8 w-8 rounded-lg inline-flex items-center justify-center bg-white/70 text-foreground/70 hover:bg-white border border-white/60 transition-all disabled:opacity-40"
+            disabled={logs.length === 0 || currentLogIndex >= logs.length - 1}
+            aria-label="Skip animation"
+            title="Skip animation"
+          >
+            <FastForward className="w-4 h-4" />
           </button>
           <button
             type="button"
