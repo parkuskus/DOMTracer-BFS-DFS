@@ -75,7 +75,7 @@ Pada implementasi ini, kedua algoritma mengevaluasi selector di setiap node yang
 
 ## How To Run
 
-### A. Menggunakan Docker
+### Menggunakan Docker
 
 Jalankan dari root project:
 
@@ -93,26 +93,6 @@ Stop container:
 ```bash
 docker compose down
 ```
-
-### B. Tanpa Docker
-
-1. Jalankan backend
-
-```bash
-cd backend
-go mod tidy
-go run ./cmd/server/main.go
-```
-
-2. Jalankan frontend (terminal baru)
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-3. Buka URL frontend yang ditampilkan Vite (contoh `http://localhost:5173`).
 
 ## Format Input File
 
