@@ -7,25 +7,133 @@ import (
 )
 
 func MatchSelector(n *parser.Node, selector string) bool {
+	selector = strings.TrimSpace(selector)
+	if selector == "" {
+		return false
+	}
+
 	if selector == "*" {
 		return true
 	}
 
-	if strings.HasPrefix(selector, "#") {
-		return n.Attributes["id"] == selector[1:]
-	}
-
-	if strings.HasPrefix(selector, ".") {
-		classes := strings.Fields(n.Attributes["class"])
-		for _, class := range classes {
-			if class == selector[1:] {
-				return true
-			}
-		}
+	tag, rest := parseLeadingTag(selector)
+	if tag != "" && n.Tag != tag {
 		return false
 	}
 
-	return n.Tag == selector
+	for len(rest) > 0 {
+		switch rest[0] {
+		case '#':
+			ident, next, ok := parseIdentifier(rest[1:])
+			if !ok {
+				return false
+			}
+			if n.Attributes["id"] != ident {
+				return false
+			}
+			rest = next
+		case '.':
+			className, next, ok := parseIdentifier(rest[1:])
+			if !ok {
+				return false
+			}
+			if !hasClass(n, className) {
+				return false
+			}
+			rest = next
+		case '[':
+			consumed, ok := matchAttributeSelector(n, rest)
+			if !ok {
+				return false
+			}
+			rest = rest[consumed:]
+		default:
+			return false
+		}
+	}
+
+	return true
+
+}
+
+func parseLeadingTag(selector string) (tag string, rest string) {
+	if selector == "" {
+		return "", ""
+	}
+
+	for i, r := range selector {
+		switch r {
+		case '.', '#', '[':
+			if i == 0 {
+				return "", selector
+			}
+			return selector[:i], selector[i:]
+		}
+	}
+
+	return selector, ""
+}
+
+func parseIdentifier(value string) (ident string, next string, ok bool) {
+	if value == "" {
+		return "", "", false
+	}
+
+	end := len(value)
+	for i, r := range value {
+		switch r {
+		case '.', '#', '[':
+			end = i
+			goto done
+		}
+	}
+
+done:
+	ident = strings.TrimSpace(value[:end])
+	if ident == "" {
+		return "", "", false
+	}
+	if end == len(value) {
+		return ident, "", true
+	}
+	return ident, value[end:], true
+}
+
+func hasClass(n *parser.Node, className string) bool {
+	classes := strings.Fields(n.Attributes["class"])
+	for _, class := range classes {
+		if class == className {
+			return true
+		}
+	}
+	return false
+}
+
+func matchAttributeSelector(n *parser.Node, rest string) (consumed int, ok bool) {
+	end := strings.Index(rest, "]")
+	if end == -1 {
+		return 0, false
+	}
+
+	body := strings.TrimSpace(rest[1:end])
+	if body == "" {
+		return 0, false
+	}
+
+	if !strings.Contains(body, "=") {
+		_, exists := n.Attributes[body]
+		return end + 1, exists
+	}
+
+	parts := strings.SplitN(body, "=", 2)
+	attrName := strings.TrimSpace(parts[0])
+	attrValue := strings.TrimSpace(parts[1])
+	attrValue = strings.Trim(attrValue, "\"'")
+	if attrName == "" {
+		return 0, false
+	}
+
+	return end + 1, n.Attributes[attrName] == attrValue
 
 }
 

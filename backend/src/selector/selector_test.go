@@ -10,8 +10,9 @@ func TestMatchesSimple(t *testing.T) {
 	node := &parser.Node{
 		Tag: "div",
 		Attributes: map[string]string{
-			"class": "box container",
+			"class": "box container c1 c2",
 			"id":    "header",
+			"x":     "y",
 		},
 	}
 
@@ -27,6 +28,13 @@ func TestMatchesSimple(t *testing.T) {
 		{".missing", false},
 		{"#header", true},
 		{"#footer", false},
+		{"div.container", true},
+		{".c1.c2", true},
+		{"div.c1.c2#header", true},
+		{"div[x=y]", true},
+		{"[x=y]", true},
+		{"[x=z]", false},
+		{"[class]", true},
 	}
 
 	for _, c := range cases {
@@ -36,6 +44,7 @@ func TestMatchesSimple(t *testing.T) {
 		}
 	}
 }
+
 func TestMatchesSelector(t *testing.T) {
 	div := &parser.Node{Tag: "div"}
 	p := &parser.Node{Tag: "p", Parent: div}
@@ -68,9 +77,9 @@ func TestMatchesSelector(t *testing.T) {
 
 func TestMatchesSelectorChainedCombinators(t *testing.T) {
 	container := &parser.Node{Tag: "div", Attributes: map[string]string{"class": "container"}}
-	ul := &parser.Node{Tag: "ul", Parent: container}
+	ul := &parser.Node{Tag: "ul", Attributes: map[string]string{"class": "c1 c2"}, Parent: container}
 	ol := &parser.Node{Tag: "ol", Parent: container}
-	li1 := &parser.Node{Tag: "li", Parent: ul}
+	li1 := &parser.Node{Tag: "li", Attributes: map[string]string{"x": "y", "id": "id1"}, Parent: ul}
 	li2 := &parser.Node{Tag: "li", Parent: ol}
 	container.Children = []*parser.Node{ul, ol}
 	ul.Children = []*parser.Node{li1}
@@ -86,5 +95,13 @@ func TestMatchesSelectorChainedCombinators(t *testing.T) {
 
 	if !Match(li1, "div > ul > li") {
 		t.Fatal("expected chained child selector without class to match")
+	}
+
+	if !Match(li1, ".container > ul.c1.c2 > li#id1[x=y]") {
+		t.Fatal("expected chained selector with tag+class+id+attribute to match")
+	}
+
+	if Match(li2, ".container > ul.c1.c2 > li#id1[x=y]") {
+		t.Fatal("expected non-matching li to fail for chained selector with simple-selector combinations")
 	}
 }
