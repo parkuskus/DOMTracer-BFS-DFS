@@ -53,3 +53,4 @@ frontend/node_modules/
 
 # Program logs
 backend/logs
+node_modules
